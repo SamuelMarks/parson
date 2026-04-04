@@ -7,18 +7,17 @@ CPPFLAGS = -O0 -g -Wall -Wextra -DTESTS_MAIN
 all: test testcpp test_hash_collisions
 
 .PHONY: test testcpp test_hash_collisions
-test: tests.c parson.c
-	$(CC) $(CFLAGS) -o $@ tests.c parson.c
+test: tests/tests.c parson.c
+	$(CC) $(CFLAGS) -I. -o $@ tests/tests.c parson.c
 	./$@
 
-testcpp: tests.c parson.c
-	$(CPPC) $(CPPFLAGS) -o $@ tests.c parson.c
+testcpp: tests/tests.c parson.c
+	$(CPPC) $(CPPFLAGS) -I. -o $@ tests/tests.c parson.c
 	./$@
 
-test_hash_collisions: tests.c parson.c
-	$(CC) $(CFLAGS) -DPARSON_FORCE_HASH_COLLISIONS -o $@ tests.c parson.c
+test_hash_collisions: tests/tests.c parson.c
+	$(CC) $(CFLAGS) -DPARSON_FORCE_HASH_COLLISIONS -I. -o $@ tests/tests.c parson.c
 	./$@
-
 clean:
 	rm -f test *.o
 

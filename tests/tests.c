@@ -31,7 +31,10 @@
 #endif
 
 /* clang-format off */
-#include "parson.h"
+#ifdef PARSON_SINGLE_HEADER
+#define PARSON_IMPLEMENTATION
+#endif
+#include "../parson.h"
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -98,7 +101,7 @@ static failing_alloc_t g_failing_alloc;
 static void *failing_malloc(size_t size);
 static void failing_free(void *ptr);
 
-static char *read_file(const char *filename);
+static char *test_read_file(const char *filename);
 const char *get_file_path(const char *filename);
 
 static int g_tests_passed;
@@ -679,7 +682,7 @@ void test_suite_9(void) {
   serialized = json_serialize_to_string_pretty(a);
   TEST((strlen(serialized) + 1) == serialization_size);
 
-  file_contents = read_file(get_file_path(filename));
+  file_contents = test_read_file(get_file_path(filename));
 
   TEST(STREQ(file_contents, serialized));
 }
@@ -991,7 +994,7 @@ void serialization_example(void) {
   json_value_free(root_value);
 }
 
-static char *read_file(const char *file_path) {
+static char *test_read_file(const char *file_path) {
   FILE *fp = NULL;
   size_t size_to_read = 0;
   size_t size_read = 0;

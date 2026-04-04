@@ -1,7 +1,7 @@
 ## About
-![doc coverage](https://img.shields.io/badge/doc_coverage-100%25-brightgreen) ![test coverage](https://img.shields.io/badge/test_coverage-100%25-brightgreen) [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
+![doc coverage](https://img.shields.io/badge/doc_coverage-21%25-red) ![test coverage](https://img.shields.io/badge/test_coverage-95%25-brightgreen) [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 
-Parson is a lightweight [json](http://json.org) library written in C. Fork of the original kgabis with increased doc coverage, test coverage, and fixes for very old platforms (MSVC 2005, DOS).
+Parson is a lightweight [json](http://json.org) library written in C. Fork of the original kgabis with header-only mode, increased doc coverage, test coverage, and fixes for very old platforms (MSVC 2005, DOS).
 
 ## Features
 * Lightweight (only 2 files)
@@ -17,9 +17,19 @@ Run:
 ```
 git clone https://github.com/SamuelMarks/parson.git
 ```
-and copy parson.h and parson.c to you source code tree.
+and copy `parson.h` and `parson.c` to your source code tree.
 
 Run ```make test``` to compile and run tests.
+
+### Header-only mode
+Parson can also be used as a header-only library. Simply copy only `parson.h` to your project. Then, in **exactly one** C or C++ file, define `PARSON_IMPLEMENTATION` before including the header:
+
+```c
+#define PARSON_IMPLEMENTATION
+#include "parson.h"
+```
+
+In all other files, just `#include "parson.h"` without defining the macro.
 
 ### CMake FetchContent
 You can also use CMake's FetchContent module to include parson in your project:
