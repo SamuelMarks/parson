@@ -1,13 +1,14 @@
-name: Build & run tests
+name: C/C++ CI
 
 on:
   push:
+    branches: [ "master" ]
   pull_request:
+    branches: [ "master" ]
 
 jobs:
-  tests:
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@v2
-    - name: Run the 'make all'
-      run: make all
+  ci:
+    uses: SamuelMarks/c-ci/.github/workflows/c-cmake-ci.yml@master
+    with:
+      build_type: 'Debug'
+      cmake_configure_flags: '-DBUILD_TESTING=ON'

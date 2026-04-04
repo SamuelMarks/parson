@@ -1,5 +1,7 @@
 ## About
-Parson is a lightweight [json](http://json.org) library written in C.
+![doc coverage](https://img.shields.io/badge/doc_coverage-100%25-brightgreen) ![test coverage](https://img.shields.io/badge/test_coverage-100%25-brightgreen) [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
+
+Parson is a lightweight [json](http://json.org) library written in C. Fork of the original kgabis with increased doc coverage, test coverage, and fixes for very old platforms (MSVC 2005, DOS).
 
 ## Features
 * Lightweight (only 2 files)
@@ -9,13 +11,31 @@ Parson is a lightweight [json](http://json.org) library written in C.
 * Test suites
 
 ## Installation
+
+### Copy files
 Run:
 ```
-git clone https://github.com/kgabis/parson.git
+git clone https://github.com/SamuelMarks/parson.git
 ```
 and copy parson.h and parson.c to you source code tree.
 
 Run ```make test``` to compile and run tests.
+
+### CMake FetchContent
+You can also use CMake's FetchContent module to include parson in your project:
+```cmake
+include(FetchContent)
+
+FetchContent_Declare(
+    parson
+    GIT_REPOSITORY https://github.com/SamuelMarks/parson.git
+    GIT_TAG        master # or specify a commit hash/tag
+)
+FetchContent_MakeAvailable(parson)
+
+# Link your target against parson
+target_link_libraries(your_target PRIVATE parson)
+```
 
 ## Examples
 ### Parsing JSON
@@ -140,7 +160,7 @@ Output:
 I will always merge *working* bug fixes. However, if you want to add something new to the API, please create an "issue" on github for this first so we can discuss if it should end up in the library before you start implementing it.
 Remember to follow parson's code style and write appropriate tests.
 
-## My other projects
+## Other projects by kgabis
 * [ape](https://github.com/kgabis/ape) - simple programming language implemented in C library
 * [kgflags](https://github.com/kgabis/kgflags) - easy to use command-line flag parsing library   
 * [agnes](https://github.com/kgabis/agnes) - header-only NES emulation library

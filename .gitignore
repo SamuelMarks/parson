@@ -6,3 +6,5 @@ tests/test_2_serialized.txt
 tests/test_2_serialized_pretty.txt
 test_hash_collisions
 build/**
+build*
+*.exe
