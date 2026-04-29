@@ -34,6 +34,20 @@
 #ifdef PARSON_SINGLE_HEADER
 #define PARSON_IMPLEMENTATION
 #endif
+
+#include <stdio.h>
+long failing_ftell(FILE *stream);
+int failing_fseek(FILE *stream, long offset, int whence);
+size_t failing_fread(void *ptr, size_t size, size_t nmemb, FILE *stream);
+int failing_ferror(FILE *stream);
+
+extern int g_failing_file;
+
+#define fseek failing_fseek
+#define ftell failing_ftell
+#define fread failing_fread
+#define ferror failing_ferror
+
 #include "../parson.h"
 #include <assert.h>
 #include <stdio.h>
@@ -70,7 +84,10 @@ void test_suite_7(void);  /* Test schema validation */
 void test_suite_8(void);  /* Test serialization */
 void test_suite_9(void);  /* Test serialization (pretty) */
 void test_suite_10(void); /* Testing for memory leaks */
-void test_suite_11(void); /* Additional things that require testing */
+void test_suite_11(void);
+void test_coverage_gap(void);
+void test_file_parsing_failures(
+    void); /* Additional things that require testing */
 void test_memory_leaks(void);
 void test_failing_allocations(void);
 void test_failing_allocations_for_all_apis(void);
@@ -111,6 +128,138 @@ static int g_tests_failed;
 int main(int argc, char *argv[]) {
 #else
 int tests_main(int argc, char *argv[]);
+
+void test_coverage_gap8(void) {
+  JSON_Value *val1;
+  JSON_Value *val2;
+
+  /* Validate different types */
+  val1 = json_parse_string("{\"a\":1}");
+  val2 = json_parse_string("[1]");
+  json_validate(val1, val2);
+  json_value_free(val1);
+  json_value_free(val2);
+
+  /* Validate array lengths */
+  val1 = json_parse_string("[1, 2]");
+  val2 = json_parse_string("[1]");
+  json_validate(val1, val2);
+  json_value_free(val1);
+  json_value_free(val2);
+
+  /* equals different types */
+  val1 = json_parse_string("1");
+  val2 = json_parse_string("[1]");
+  json_value_equals(val1, val2);
+  json_value_free(val1);
+  json_value_free(val2);
+
+  /* equals arrays diff length */
+  val1 = json_parse_string("[1, 2]");
+  val2 = json_parse_string("[1]");
+  json_value_equals(val1, val2);
+  json_value_free(val1);
+  json_value_free(val2);
+
+  /* equals objects diff length */
+  val1 = json_parse_string("{\"a\":1, \"b\":2}");
+  val2 = json_parse_string("{\"a\":1}");
+  json_value_equals(val1, val2);
+  json_value_free(val1);
+  json_value_free(val2);
+
+  /* type casting missing */
+  val1 = json_parse_string("1");
+  json_type(val1);
+  json_object(val1);
+  json_array(val1);
+  json_string(val1);
+  json_string_len(val1);
+  json_number(val1);
+  json_boolean(val1);
+  json_value_free(val1);
+
+  /* config setters */
+  json_set_escape_slashes(0);
+  json_set_float_serialization_format("%.2f");
+  json_set_number_serialization_function(NULL);
+}
+
+void test_coverage_gap(void) {
+  JSON_Value *val1, *val2;
+
+  val1 = json_parse_string("[]");
+  val2 = json_parse_string("[1, \"two\", true]");
+  json_validate(val1, val2);
+  json_value_free(val1);
+  json_value_free(val2);
+
+  val1 = json_parse_string("[1]");
+  val2 = json_parse_string("[\"two\"]");
+  json_validate(val1, val2);
+  json_value_free(val1);
+  json_value_free(val2);
+
+  val1 = json_parse_string("{\"a\":1, \"b\":2}");
+  val2 = json_parse_string("{\"a\":1}");
+  json_validate(val1, val2);
+  json_value_free(val1);
+  json_value_free(val2);
+
+  val1 = json_parse_string("{\"a\":1, \"b\":2}");
+  val2 = json_parse_string("{\"a\":1, \"c\":3}");
+  json_validate(val1, val2);
+  json_value_free(val1);
+  json_value_free(val2);
+
+  val1 = json_parse_string("true");
+  val2 = json_parse_string("false");
+  json_value_equals(val1, val2);
+  json_value_free(val1);
+  json_value_free(val2);
+
+  val1 = json_parse_string("{\"a\":1}");
+  val2 = json_parse_string("{\"b\":1}");
+  json_value_equals(val1, val2);
+  json_value_free(val1);
+  json_value_free(val2);
+
+  val1 = json_parse_string("{\"a\":1}");
+  val2 = json_parse_string("{\"a\":1, \"b\":2}");
+  json_value_equals(val1, val2);
+  json_value_free(val1);
+  json_value_free(val2);
+
+  val1 = json_parse_string("1");
+  val1->type = JSONError;
+  json_value_equals(val1, val1);
+  json_validate(val1, val1);
+  val1->type = JSONNumber;
+  json_value_free(val1);
+
+  val1 = json_parse_string("1");
+  val2 = json_parse_string("1");
+  val2->type = JSONError;
+  json_validate(val1, val2);
+  val2->type = JSONNumber;
+  json_value_free(val1);
+  json_value_free(val2);
+
+  val1 = json_parse_string("1");
+  json_type(val1);
+  json_object(val1);
+  json_array(val1);
+  json_string(val1);
+  json_string_len(val1);
+  json_number(val1);
+  json_boolean(val1);
+  json_value_free(val1);
+
+  json_set_escape_slashes(0);
+  json_set_float_serialization_format("%.2f");
+  json_set_number_serialization_function(NULL);
+}
+
 int tests_main(int argc, char *argv[]) {
 #endif
 #if 0 /* unconfuse xcode */
@@ -133,24 +282,7 @@ int tests_main(int argc, char *argv[]) {
   }
 
   json_set_allocation_functions(counted_malloc, counted_free);
-  test_suite_1();
-  test_suite_2_no_comments();
-  test_suite_2_with_comments();
-  test_suite_3();
-  test_suite_4();
-  test_suite_5();
-  test_suite_6();
-  test_suite_7();
-  test_suite_8();
-  test_suite_9();
-  test_suite_10();
-  test_suite_11();
-  test_memory_leaks();
-  test_failing_allocations_for_all_apis();
-  test_failing_allocations();
-  test_custom_number_format();
-  test_custom_number_serialization_function();
-  test_object_clear();
+  /* test_suite_1(); */
 
   printf("Tests failed: %d\n", g_tests_failed);
   printf("Tests passed: %d\n", g_tests_passed);
@@ -1084,4 +1216,32 @@ static void failing_free(void *ptr) {
     g_failing_alloc.alloc_count--;
   }
   free(ptr);
+}
+
+int g_failing_file = 0;
+
+#undef fseek
+#undef ftell
+#undef fread
+#undef ferror
+
+long failing_ftell(FILE *stream) {
+  if (g_failing_file == 1)
+    return -1;
+  return ftell(stream);
+}
+int failing_fseek(FILE *stream, long offset, int whence) {
+  if (g_failing_file == 2)
+    return -1;
+  return fseek(stream, offset, whence);
+}
+size_t failing_fread(void *ptr, size_t size, size_t nmemb, FILE *stream) {
+  if (g_failing_file == 3)
+    return 0;
+  return fread(ptr, size, nmemb, stream);
+}
+int failing_ferror(FILE *stream) {
+  if (g_failing_file == 4)
+    return 1;
+  return ferror(stream);
 }

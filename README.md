@@ -1,5 +1,5 @@
 ## About
-![doc coverage](https://img.shields.io/badge/doc_coverage-21%25-red) ![test coverage](https://img.shields.io/badge/test_coverage-95%25-brightgreen) [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
+![doc coverage](https://img.shields.io/badge/doc_coverage-21%25-red) ![test coverage](https://img.shields.io/badge/test_coverage-0%25-red) [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 
 Parson is a lightweight [json](http://json.org) library written in C. Fork of the original kgabis with header-only mode, increased doc coverage, test coverage, and fixes for very old platforms (MSVC 2005, DOS).
 
@@ -114,7 +114,7 @@ void persistence_example(void) {
     const char *name = NULL;
     if (user_data == NULL || json_validate(schema, user_data) != JSONSuccess) {
         puts("Enter your name:");
-        scanf("%s", buf);
+        scanf("%255s", buf);
         user_data = json_value_init_object();
         json_object_set_string(json_object(user_data), "name", buf);
         json_serialize_to_file(user_data, "user_data.json");
