@@ -22,7 +22,14 @@
  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  THE SOFTWARE.
 */
+/**
+ * \\file tests.c
+ * \\brief Test suite for parson JSON library
+ * \\author Krzysztof Gabis
+ */
+
 #ifdef _MSC_VER
+/** \\brief Suppress MSVC warnings */
 #define _CRT_SECURE_NO_WARNINGS
 #endif
 
@@ -32,20 +39,31 @@
 
 /* clang-format off */
 #ifdef PARSON_SINGLE_HEADER
+/** \\brief Implement parson inside single header */
 #define PARSON_IMPLEMENTATION
 #endif
 
 #include <stdio.h>
+/** \brief failing_ftell */
 long failing_ftell(FILE *stream);
+/** \brief failing_fseek */
 int failing_fseek(FILE *stream, long offset, int whence);
+/** \brief failing_fread */
 size_t failing_fread(void *ptr, size_t size, size_t nmemb, FILE *stream);
+/** \brief failing_ferror */
 int failing_ferror(FILE *stream);
 
+/** \\brief Global variable declaration for g_failing_file */
+/** \\brief Global flag to simulate failing IO */
 extern int g_failing_file;
 
+/** \\brief Override fseek */
 #define fseek failing_fseek
+/** \\brief Override ftell */
 #define ftell failing_ftell
+/** \\brief Override fread */
 #define fread failing_fread
+/** \\brief Override ferror */
 #define ferror failing_ferror
 
 #include "../parson.h"
@@ -58,6 +76,7 @@ extern int g_failing_file;
 #include "add_tests.c"
 /* clang-format on */
 
+/** \\brief Test assertion macro */
 #define TEST(A)                                                                \
   do {                                                                         \
     if (A) {                                                                   \
@@ -68,43 +87,77 @@ extern int g_failing_file;
     }                                                                          \
   } while (0)
 
+/** \\brief Macro to check string equality */
 #define STREQ(A, B) ((A) && (B) ? strcmp((A), (B)) == 0 : 0)
+/** \\brief Double precision epsilon */
 #define DBL_EPSILON 2.2204460492503131e-16
+/** \\brief Check if two doubles are equal */
 #define DBL_EQ(a, b) (fabs((a) - (b)) < DBL_EPSILON)
 
+/** \brief test_suite_1 */
 void test_suite_1(void); /* Test 3 files from json.org + serialization*/
+/** \\brief Forward declaration for test_suite_2 */
 void test_suite_2(JSON_Value *value); /* Test correctness of parsed values */
+/** \brief test_suite_2_no_comments */
 void test_suite_2_no_comments(void);
+/** \brief test_suite_2_with_comments */
 void test_suite_2_with_comments(void);
-void test_suite_3(void);  /* Test parsing valid and invalid strings */
-void test_suite_4(void);  /* Test deep copy function */
-void test_suite_5(void);  /* Test building json values from scratch */
-void test_suite_6(void);  /* Test value comparing verification */
-void test_suite_7(void);  /* Test schema validation */
-void test_suite_8(void);  /* Test serialization */
-void test_suite_9(void);  /* Test serialization (pretty) */
+/** \brief test_suite_3 */
+void test_suite_3(void); /* Test parsing valid and invalid strings */
+/** \\brief Forward declaration for test_suite_2 */
+void test_suite_4(void); /* Test deep copy function */
+/** \brief test_suite_5 */
+void test_suite_5(void); /* Test building json values from scratch */
+/** \brief test_suite_6 */
+void test_suite_6(void); /* Test value comparing verification */
+/** \brief test_suite_7 */
+void test_suite_7(void); /* Test schema validation */
+/** \brief test_suite_8 */
+void test_suite_8(void); /* Test serialization */
+/** \brief test_suite_9 */
+void test_suite_9(void); /* Test serialization (pretty) */
+/** \brief test_suite_10 */
 void test_suite_10(void); /* Testing for memory leaks */
+/** \brief test_suite_11 */
 void test_suite_11(void);
+/** \brief test_coverage_gap */
 void test_coverage_gap(void);
+/** \brief test_file_parsing_failures */
 void test_file_parsing_failures(
     void); /* Additional things that require testing */
+/** \brief test_memory_leaks */
 void test_memory_leaks(void);
+/** \brief test_failing_allocations */
 void test_failing_allocations(void);
+/** \brief test_failing_allocations_for_all_apis */
 void test_failing_allocations_for_all_apis(void);
+/** \brief test_custom_number_format */
 void test_custom_number_format(void);
+/** \brief test_custom_number_serialization_function */
 void test_custom_number_serialization_function(void);
+/** \brief test_object_clear */
 void test_object_clear(void);
 
+/** \brief print_commits_info */
 void print_commits_info(const char *username, const char *repo);
+/** \brief persistence_example */
 void persistence_example(void);
+/** \brief serialization_example */
 void serialization_example(void);
 
+/** \brief Path to the tests directory */
 static const char *g_tests_path = "tests";
 
+/** \brief Global malloc count tracking */
 static int g_malloc_count = 0;
+/** \brief counted_malloc */
+/** \brief Forward declaration for counted_malloc */
 static void *counted_malloc(size_t size);
-static void counted_free(void *ptr);
+/** \brief counted_free */
+static /** \\brief Forward declaration for test_suite_2 */
+void counted_free(void *ptr);
 
+/** \brief Tracker for failing allocations */
 typedef struct failing_alloc {
   int allocation_to_fail;
   int alloc_count;
@@ -113,22 +166,30 @@ typedef struct failing_alloc {
   int should_fail;
 } failing_alloc_t;
 
+/** \brief Global failing allocator tracking struct */
 static failing_alloc_t g_failing_alloc;
 
+/** \brief failing_malloc */
+/** \brief Forward declaration for failing_malloc */
 static void *failing_malloc(size_t size);
-static void failing_free(void *ptr);
+/** \brief failing_free */
+static /** \\brief Forward declaration for test_suite_2 */
+void failing_free(void *ptr);
 
+/** \brief test_read_file */
+/** \brief Forward declaration for test_read_file */
 static char *test_read_file(const char *filename);
+/** \\brief Forward declaration for get_file_path */
 const char *get_file_path(const char *filename);
 
+/** \brief Counter for passed tests */
 static int g_tests_passed;
+/** \brief Counter for failed tests */
 static int g_tests_failed;
 
-#ifdef TESTS_MAIN
-int main(int argc, char *argv[]) {
-#else
-int tests_main(int argc, char *argv[]);
-
+/**
+ * \\brief test_coverage_gap8
+ */
 void test_coverage_gap8(void) {
   JSON_Value *val1;
   JSON_Value *val2;
@@ -183,8 +244,12 @@ void test_coverage_gap8(void) {
   json_set_escape_slashes(0);
   json_set_float_serialization_format("%.2f");
   json_set_number_serialization_function(NULL);
+  json_set_float_serialization_format(NULL);
 }
 
+/**
+ * \\brief test_coverage_gap
+ */
 void test_coverage_gap(void) {
   JSON_Value *val1, *val2;
 
@@ -231,21 +296,6 @@ void test_coverage_gap(void) {
   json_value_free(val2);
 
   val1 = json_parse_string("1");
-  val1->type = JSONError;
-  json_value_equals(val1, val1);
-  json_validate(val1, val1);
-  val1->type = JSONNumber;
-  json_value_free(val1);
-
-  val1 = json_parse_string("1");
-  val2 = json_parse_string("1");
-  val2->type = JSONError;
-  json_validate(val1, val2);
-  val2->type = JSONNumber;
-  json_value_free(val1);
-  json_value_free(val2);
-
-  val1 = json_parse_string("1");
   json_type(val1);
   json_object(val1);
   json_array(val1);
@@ -258,8 +308,25 @@ void test_coverage_gap(void) {
   json_set_escape_slashes(0);
   json_set_float_serialization_format("%.2f");
   json_set_number_serialization_function(NULL);
+  json_set_float_serialization_format(NULL);
 }
 
+#ifdef TESTS_MAIN
+/**
+ * \\brief main
+ * \\param argc Parameter argc
+ * \\param argv Parameter argv
+ */
+int main(int argc, char *argv[]) {
+#else
+/** \brief tests_main */
+int tests_main(int argc, char *argv[]);
+
+/**
+ * \\brief tests_main
+ * \\param argc Parameter argc
+ * \\param argv Parameter argv
+ */
 int tests_main(int argc, char *argv[]) {
 #endif
 #if 0 /* unconfuse xcode */
@@ -282,7 +349,26 @@ int tests_main(int argc, char *argv[]) {
   }
 
   json_set_allocation_functions(counted_malloc, counted_free);
-  /* test_suite_1(); */
+  test_suite_1();
+  test_suite_2_no_comments();
+  test_suite_2_with_comments();
+  test_suite_3();
+  test_suite_4();
+  test_suite_5();
+  test_suite_6();
+  test_suite_7();
+  test_suite_8();
+  test_suite_9();
+  test_suite_10();
+  test_suite_11();
+  test_coverage_gap();
+  test_coverage_gap8();
+  test_memory_leaks();
+  test_failing_allocations_for_all_apis();
+  test_failing_allocations();
+  test_custom_number_format();
+  test_custom_number_serialization_function();
+  test_object_clear();
 
   printf("Tests failed: %d\n", g_tests_failed);
   printf("Tests passed: %d\n", g_tests_passed);
@@ -291,6 +377,9 @@ int tests_main(int argc, char *argv[]) {
   return 0;
 }
 
+/**
+ * \\brief test_suite_1
+ */
 void test_suite_1(void) {
   JSON_Value *val;
   TEST((val = json_parse_file(get_file_path("test_1_1.txt"))) != NULL);
@@ -344,6 +433,10 @@ void test_suite_1(void) {
   }
 }
 
+/**
+ * \\brief test_suite_2
+ * \\param root_value Parameter root_value
+ */
 void test_suite_2(JSON_Value *root_value) {
   JSON_Object *root_object;
   JSON_Array *array;
@@ -475,6 +568,9 @@ void test_suite_2(JSON_Value *root_value) {
   TEST(json_value_get_parent(root_value) == NULL);
 }
 
+/**
+ * \\brief test_suite_2_no_comments
+ */
 void test_suite_2_no_comments(void) {
   const char *filename = "test_2.txt";
   JSON_Value *root_value = NULL;
@@ -488,6 +584,9 @@ void test_suite_2_no_comments(void) {
   json_value_free(root_value);
 }
 
+/**
+ * \\brief test_suite_2_with_comments
+ */
 void test_suite_2_with_comments(void) {
   const char *filename = "test_2_comments.txt";
   JSON_Value *root_value = NULL;
@@ -501,6 +600,9 @@ void test_suite_2_with_comments(void) {
   json_value_free(root_value);
 }
 
+/**
+ * \\brief test_suite_3
+ */
 void test_suite_3(void) {
   /* Testing valid strings */
   TEST(json_parse_string("{\"lorem\":\"ipsum\"}") != NULL);
@@ -569,6 +671,9 @@ void test_suite_3(void) {
   TEST(g_malloc_count == 0);
 }
 
+/**
+ * \\brief test_suite_4
+ */
 void test_suite_4(void) {
   const char *filename = "test_2.txt";
   JSON_Value *a = NULL, *a_copy = NULL;
@@ -579,6 +684,9 @@ void test_suite_4(void) {
   TEST(json_value_equals(a, a_copy));
 }
 
+/**
+ * \\brief test_suite_5
+ */
 void test_suite_5(void) {
   double zero = 0.0; /* msvc is silly (workaround for error C2124) */
 
@@ -746,6 +854,9 @@ void test_suite_5(void) {
   TEST(json_object_set_number(obj, "num", 1.0 / zero) == JSONFailure);
 }
 
+/**
+ * \\brief test_suite_6
+ */
 void test_suite_6(void) {
   const char *filename = "test_2.txt";
   JSON_Value *a = NULL;
@@ -762,6 +873,9 @@ void test_suite_6(void) {
   TEST(!json_value_equals(a, b));
 }
 
+/**
+ * \\brief test_suite_7
+ */
 void test_suite_7(void) {
   JSON_Value *val_from_file = json_parse_file(get_file_path("test_5.txt"));
   JSON_Value *schema = json_value_init_object();
@@ -779,6 +893,9 @@ void test_suite_7(void) {
   TEST(json_validate(schema, val_from_file) == JSONFailure);
 }
 
+/**
+ * \\brief test_suite_8
+ */
 void test_suite_8(void) {
   const char *filename = "test_2.txt";
   const char *temp_filename = "test_2_serialized.txt";
@@ -796,6 +913,9 @@ void test_suite_8(void) {
   TEST((strlen(buf) + 1) == serialization_size);
 }
 
+/**
+ * \\brief test_suite_9
+ */
 void test_suite_9(void) {
   const char *filename = "test_2_pretty.txt";
   const char *temp_filename = "test_2_serialized_pretty.txt";
@@ -819,6 +939,9 @@ void test_suite_9(void) {
   TEST(STREQ(file_contents, serialized));
 }
 
+/**
+ * \\brief test_suite_10
+ */
 void test_suite_10(void) {
   JSON_Value *val;
   char *serialized;
@@ -842,6 +965,9 @@ void test_suite_10(void) {
   TEST(g_malloc_count == 0);
 }
 
+/**
+ * \\brief test_suite_11
+ */
 void test_suite_11(void) {
   const char *array_with_slashes = "[\"a/b/c\"]";
   const char *array_with_escaped_slashes = "[\"a\\/b\\/c\"]";
@@ -860,6 +986,9 @@ void test_suite_11(void) {
   TEST(STREQ(array_with_escaped_slashes, serialized));
 }
 
+/**
+ * \\brief test_memory_leaks
+ */
 void test_memory_leaks(void) {
   g_malloc_count = 0;
 
@@ -873,6 +1002,9 @@ void test_memory_leaks(void) {
   TEST(g_malloc_count == 0);
 }
 
+/**
+ * \\brief test_failing_allocations_for_all_apis
+ */
 void test_failing_allocations_for_all_apis(void) {
   int n = 0;
 
@@ -907,6 +1039,9 @@ void test_failing_allocations_for_all_apis(void) {
   g_tests_passed++;
 }
 
+/**
+ * \\brief test_failing_allocations
+ */
 void test_failing_allocations(void) {
   const char *filename = "test_2.txt";
   JSON_Value *root_value = NULL;
@@ -982,6 +1117,9 @@ void test_failing_allocations(void) {
   g_tests_passed++;
 }
 
+/**
+ * \\brief test_custom_number_format
+ */
 void test_custom_number_format(void) {
   g_malloc_count = 0;
   {
@@ -998,7 +1136,14 @@ void test_custom_number_format(void) {
   TEST(g_malloc_count == 0);
 }
 
+/** \brief Flag tracking if custom serialization was called */
 static int custom_serialization_func_called = 0;
+/**
+ * \\brief custom_serialization_func
+ * \\param num Parameter num
+ * \\param buf Parameter buf
+ * \\return Returns static int
+ */
 static int custom_serialization_func(double num, char *buf) {
   char num_buf[32];
   custom_serialization_func_called = 1;
@@ -1011,6 +1156,9 @@ static int custom_serialization_func(double num, char *buf) {
 #endif
 }
 
+/**
+ * \\brief test_custom_number_serialization_function
+ */
 void test_custom_number_serialization_function(void) {
   g_malloc_count = 0;
   {
@@ -1030,6 +1178,9 @@ void test_custom_number_serialization_function(void) {
   TEST(g_malloc_count == 0);
 }
 
+/**
+ * \\brief test_object_clear
+ */
 void test_object_clear(void) {
   g_malloc_count = 0;
   {
@@ -1043,6 +1194,11 @@ void test_object_clear(void) {
   TEST(g_malloc_count == 0);
 }
 
+/**
+ * \\brief print_commits_info
+ * \\param username Parameter username
+ * \\param repo Parameter repo
+ */
 void print_commits_info(const char *username, const char *repo) {
   JSON_Value *root_value;
   JSON_Array *commits;
@@ -1091,6 +1247,9 @@ void print_commits_info(const char *username, const char *repo) {
   system(cleanup_command);
 }
 
+/**
+ * \\brief persistence_example
+ */
 void persistence_example(void) {
   JSON_Value *schema = json_parse_string("{\"name\":\"\"}");
   JSON_Value *user_data = json_parse_file(get_file_path("user_data.json"));
@@ -1098,7 +1257,11 @@ void persistence_example(void) {
   const char *name = NULL;
   if (user_data == NULL || json_validate(schema, user_data) != JSONSuccess) {
     puts("Enter your name:");
+#if defined(_MSC_VER)
+    scanf_s("%s", buf, (unsigned)sizeof(buf));
+#else
     scanf("%s", buf);
+#endif
     user_data = json_value_init_object();
     json_object_set_string(json_object(user_data), "name", buf);
     json_serialize_to_file(user_data, "user_data.json");
@@ -1110,6 +1273,9 @@ void persistence_example(void) {
   return;
 }
 
+/**
+ * \\brief serialization_example
+ */
 void serialization_example(void) {
   JSON_Value *root_value = json_value_init_object();
   JSON_Object *root_object = json_value_get_object(root_value);
@@ -1126,7 +1292,12 @@ void serialization_example(void) {
   json_value_free(root_value);
 }
 
-static char *test_read_file(const char *file_path) {
+/**
+ * \\brief test_read_file
+ * \\param file_path Parameter file_path
+ * \\return Returns static char *
+ */
+static char * test_read_file(const char *file_path) {
   FILE *fp = NULL;
   size_t size_to_read = 0;
   size_t size_read = 0;
@@ -1170,6 +1341,7 @@ static char *test_read_file(const char *file_path) {
   return file_contents;
 }
 
+/** \\brief get_file_path test */
 const char *get_file_path(const char *filename) {
   static char path_buf[2048] = {0};
   memset(path_buf, 0, sizeof(path_buf));
@@ -1181,7 +1353,12 @@ const char *get_file_path(const char *filename) {
   return path_buf;
 }
 
-static void *counted_malloc(size_t size) {
+/**
+ * \\brief counted_malloc
+ * \\param size Parameter size
+ * \\return Returns static void *
+ */
+static void * counted_malloc(size_t size) {
   void *res = malloc(size);
   if (res != NULL) {
     g_malloc_count++;
@@ -1189,6 +1366,11 @@ static void *counted_malloc(size_t size) {
   return res;
 }
 
+/**
+ * \\brief counted_free
+ * \\param ptr Parameter ptr
+ * \\return Returns static void
+ */
 static void counted_free(void *ptr) {
   if (ptr != NULL) {
     g_malloc_count--;
@@ -1196,7 +1378,12 @@ static void counted_free(void *ptr) {
   free(ptr);
 }
 
-static void *failing_malloc(size_t size) {
+/**
+ * \\brief failing_malloc
+ * \\param size Parameter size
+ * \\return Returns static void *
+ */
+static void * failing_malloc(size_t size) {
   void *res = NULL;
   if (g_failing_alloc.should_fail &&
       g_failing_alloc.total_count >= g_failing_alloc.allocation_to_fail) {
@@ -1211,6 +1398,11 @@ static void *failing_malloc(size_t size) {
   return res;
 }
 
+/**
+ * \\brief failing_free
+ * \\param ptr Parameter ptr
+ * \\return Returns static void
+ */
 static void failing_free(void *ptr) {
   if (ptr != NULL) {
     g_failing_alloc.alloc_count--;
@@ -1225,21 +1417,42 @@ int g_failing_file = 0;
 #undef fread
 #undef ferror
 
+/**
+ * \\brief failing_ftell
+ * \\param stream Parameter stream
+ */
 long failing_ftell(FILE *stream) {
   if (g_failing_file == 1)
     return -1;
   return ftell(stream);
 }
+/**
+ * \\brief failing_fseek
+ * \\param stream Parameter stream
+ * \\param offset Parameter offset
+ * \\param whence Parameter whence
+ */
 int failing_fseek(FILE *stream, long offset, int whence) {
   if (g_failing_file == 2)
     return -1;
   return fseek(stream, offset, whence);
 }
+/**
+ * \\brief failing_fread
+ * \\param ptr Parameter ptr
+ * \\param size Parameter size
+ * \\param nmemb Parameter nmemb
+ * \\param stream Parameter stream
+ */
 size_t failing_fread(void *ptr, size_t size, size_t nmemb, FILE *stream) {
   if (g_failing_file == 3)
     return 0;
   return fread(ptr, size, nmemb, stream);
 }
+/**
+ * \\brief failing_ferror
+ * \\param stream Parameter stream
+ */
 int failing_ferror(FILE *stream) {
   if (g_failing_file == 4)
     return 1;

@@ -1,9 +1,18 @@
 ﻿/* clang-format off */
+/**
+ * \\file add_tests.c
+ * \\brief Additional test suite for parson JSON library
+ * \\author Krzysztof Gabis
+ */
+
 #include "../parson.h"
 #include <stdio.h>
 #include <string.h>
 /* clang-format on */
 
+/**
+ * \\brief test_all_apis
+ */
 void test_all_apis(void) {
   JSON_Value *val = json_value_init_object();
   JSON_Object *obj = json_value_get_object(val);
@@ -108,6 +117,9 @@ void test_all_apis(void) {
   json_parse_file_with_comments("nonexistent.json");
 }
 
+/**
+ * \\brief test_null_and_invalid_apis
+ */
 void test_null_and_invalid_apis(void) {
   JSON_Value *val = json_parse_string("{\"a\":1, \"b\":[1,2]}");
   JSON_Object *obj = json_value_get_object(val);

@@ -22,8 +22,15 @@
  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  THE SOFTWARE.
 */
+/**
+ * \\file parson.h
+ * \\brief Lightweight JSON library header file
+ * \\author Krzysztof Gabis
+ */
+
 
 #ifndef parson_parson_h
+/** \\brief Header guard */
 #define parson_parson_h
 
 #ifdef __cplusplus
@@ -33,10 +40,14 @@ extern "C" {
 } /** unconfuse xcode */
 #endif
 
+/** \brief Major version of Parson */
 #define PARSON_VERSION_MAJOR 1
+/** \brief Minor version of Parson */
 #define PARSON_VERSION_MINOR 5
+/** \brief Patch version of Parson */
 #define PARSON_VERSION_PATCH 3
 
+/** \brief String representation of Parson version */
 #define PARSON_VERSION_STRING "1.5.3"
 
 /* clang-format off */
@@ -45,6 +56,7 @@ extern "C" {
 #ifdef PARSON_IMPLEMENTATION
 #ifdef _MSC_VER
 #ifndef _CRT_SECURE_NO_WARNINGS
+/** \brief Suppress MSVC warnings */
 #define _CRT_SECURE_NO_WARNINGS
 #endif /* _CRT_SECURE_NO_WARNINGS */
 #endif /* _MSC_VER */
@@ -60,12 +72,15 @@ extern "C" {
 /* clang-format on */
 
 #if defined(_MSC_VER)
+/** \brief Format string for 64-bit integer */
 #define PARSON_NUM_FORMAT "%I64d"
 #else
+/** \brief Format string for 64-bit integer */
 #define PARSON_NUM_FORMAT "%lld"
 #endif
 
 /** Types and enums */
+/** \brief JSON_Object */
 typedef struct json_object_t JSON_Object;
 /** \brief JSON_Array */
 typedef struct json_array_t JSON_Array;
@@ -74,94 +89,139 @@ typedef struct json_value_t JSON_Value;
 
 /** \brief json_value_type */
 enum json_value_type {
+  /** \\brief JSON error value */
   JSONError = -1,
+  /** \\brief JSON null value */
   JSONNull = 1,
+  /** \\brief JSON string value */
   JSONString = 2,
+  /** \\brief JSON number value */
   JSONNumber = 3,
+  /** \\brief JSON object value */
   JSONObject = 4,
+  /** \\brief JSON array value */
   JSONArray = 5,
+  /** \\brief JSON boolean value */
   JSONBoolean = 6
 };
 /** \brief JSON_Value_Type */
 typedef int JSON_Value_Type;
 
 /** \brief json_result_t */
-enum json_result_t { JSONSuccess = 0, JSONFailure = -1 };
+enum json_result_t { /** \\brief Success */ JSONSuccess = 0, /** \\brief Failure */ JSONFailure = -1 };
 /** \brief JSON_Status */
 typedef int JSON_Status;
 
 /** \brief JSON_Malloc_Function */
 typedef void *(*JSON_Malloc_Function)(size_t);
-/** \brief JSON_Free_Function */
-typedef void (*JSON_Free_Function)(void *);
+/**
+ * \\brief void
+ * \\param JSON_Free_Function Parameter JSON_Free_Function
+ * \\return Returns typedef
+ */
+/** \\brief JSON_Free_Function */
+typedef void(*JSON_Free_Function)(void *);
 
-/** A function used for serializing numbers (see
+/** \brief JSON_Number_Serialization_Function
+   A function used for serializing numbers (see
    json_set_number_serialization_function). If 'buf' is null then it should
    return number of bytes that would've been written (but not more than
    PARSON_NUM_BUF_SIZE).
 */
+/** \\brief JSON_Number_Serialization_Function */
 typedef int (*JSON_Number_Serialization_Function)(double num, char *buf);
 
 /** Call only once, before calling any other function from parson API. If not
    called, malloc and free from stdlib will be used for all allocations */
+/** \\brief json_set_allocation_functions */
 void json_set_allocation_functions(JSON_Malloc_Function malloc_fun,
                                    JSON_Free_Function free_fun);
 
 /** Sets if slashes should be escaped or not when serializing JSON. By default
  slashes are escaped. This function sets a global setting and is not thread
  safe. */
+/** \\brief json_set_escape_slashes */
 void json_set_escape_slashes(int escape_slashes);
 
 /** Sets float format used for serialization of numbers.
    Make sure it can't serialize to a string longer than PARSON_NUM_BUF_SIZE.
    If format is null then the default format is used. */
+/** \\brief json_set_float_serialization_format */
 void json_set_float_serialization_format(const char *format);
 
 /** Sets a function that will be used for serialization of numbers.
    If function is null then the default serialization function is used. */
+/** \\brief json_set_number_serialization_function */
 void json_set_number_serialization_function(
     JSON_Number_Serialization_Function fun);
 
 /** Parses first JSON value in a file, returns NULL in case of error */
+/** \\brief json_parse_file
+ * \\note The returned JSON_Value must be freed with json_value_free(). */
 JSON_Value *json_parse_file(const char *filename);
 
 /** Parses first JSON value in a file and ignores comments (/ * * / and //),
    returns NULL in case of error */
+/** \\brief json_parse_file_with_comments
+ * \\note The returned JSON_Value must be freed with json_value_free(). */
 JSON_Value *json_parse_file_with_comments(const char *filename);
 
 /**  Parses first JSON value in a string, returns NULL in case of error */
+/** \\brief json_parse_string
+ * \\note The returned JSON_Value must be freed with json_value_free(). */
 JSON_Value *json_parse_string(const char *string);
 
 /**  Parses first JSON value in a string and ignores comments (/ * * / and //),
     returns NULL in case of error */
+/** \\brief json_parse_string_with_comments
+ * \\note The returned JSON_Value must be freed with json_value_free(). */
 JSON_Value *json_parse_string_with_comments(const char *string);
 
 /** Serialization */
 size_t
 json_serialization_size(const JSON_Value *value); /** returns 0 on fail */
+/** \\brief json_serialize_to_buffer */
 JSON_Status json_serialize_to_buffer(const JSON_Value *value, char *buf,
                                      size_t buf_size_in_bytes);
-/** \brief json_serialize_to_file */
+/**
+ * \\brief json_serialize_to_file
+ * \\param value Parameter value
+ * \\param filename Parameter filename
+ */
 JSON_Status json_serialize_to_file(const JSON_Value *value,
                                    const char *filename);
+/** \\brief json_serialize_to_string
+ * \\note The returned string must be freed with json_free_serialized_string(). */
 char *json_serialize_to_string(const JSON_Value *value);
 
 /** Pretty serialization */
+/** \\brief json_serialization_size_pretty */
 size_t json_serialization_size_pretty(
     const JSON_Value *value); /** returns 0 on fail */
+/** \\brief json_serialize_to_buffer_pretty */
 JSON_Status json_serialize_to_buffer_pretty(const JSON_Value *value, char *buf,
                                             size_t buf_size_in_bytes);
-/** \brief json_serialize_to_file_pretty */
+/**
+ * \\brief json_serialize_to_file_pretty
+ * \\param value Parameter value
+ * \\param filename Parameter filename
+ */
 JSON_Status json_serialize_to_file_pretty(const JSON_Value *value,
                                           const char *filename);
+/** \\brief json_serialize_to_string_pretty
+ * \\note The returned string must be freed with json_free_serialized_string(). */
 char *json_serialize_to_string_pretty(const JSON_Value *value);
 
-/** \brief json_free_serialized_string */
+/**
+ * \\brief json_free_serialized_string
+ * \\param string Parameter string
+ */
 void json_free_serialized_string(
     char *string); /** frees string from json_serialize_to_string and
                       json_serialize_to_string_pretty */
 
 /** Comparing */
+/** \\brief json_value_equals */
 int json_value_equals(const JSON_Value *a, const JSON_Value *b);
 
 /** Validation
@@ -174,25 +234,49 @@ int json_value_equals(const JSON_Value *a, const JSON_Value *b);
    in tested array. Empty objects ({}) validate all objects, empty arrays ([])
    validate all arrays, null validates values of every type.
  */
+/** \\brief json_validate */
 JSON_Status json_validate(const JSON_Value *schema, const JSON_Value *value);
 
 /**
  * JSON Object
  */
+/** \\brief json_object_get_value
+ * \\note The returned reference is owned by its parent. Do not free it manually. */
 JSON_Value *json_object_get_value(const JSON_Object *object, const char *name);
-/** \brief json_object_get_string */
+/**
+ * \\brief json_object_get_string
+ * \\param object Parameter object
+ * \\param name Parameter name
+ * \\return Returns const char *
+ */
 const char *json_object_get_string(const JSON_Object *object, const char *name);
-/** \brief json_object_get_string_len */
+/**
+ * \\brief json_object_get_string_len
+ * \\param object Parameter object
+ * \\param name Parameter name
+ */
 size_t json_object_get_string_len(
     const JSON_Object *object,
     const char *name); /** doesn't account for last null character */
+/** \\brief json_object_get_object
+ * \\note The returned reference is owned by its parent. Do not free it manually. */
 JSON_Object *json_object_get_object(const JSON_Object *object,
                                     const char *name);
-/** \brief json_object_get_array */
+/**
+ * \\brief json_object_get_array
+ * \\param object Parameter object
+ * \\param name Parameter name
+ * \\return Returns JSON_Array *
+ */
 JSON_Array *json_object_get_array(const JSON_Object *object, const char *name);
-/** \brief json_object_get_number */
+/**
+ * \\brief json_object_get_number
+ * \\param object Parameter object
+ * \\param name Parameter name
+ */
 double json_object_get_number(const JSON_Object *object,
                               const char *name); /** returns 0 on fail */
+/** \\brief json_object_get_boolean */
 int json_object_get_boolean(const JSON_Object *object,
                             const char *name); /** returns -1 on fail */
 
@@ -200,218 +284,461 @@ int json_object_get_boolean(const JSON_Object *object,
  objects, just like in structs or c++/java/c# objects (e.g.
  objectA.objectB.value). Because valid names in JSON can contain dots, some
  values may be inaccessible this way. */
+/** \\brief json_object_dotget_value
+ * \\note The returned reference is owned by its parent. Do not free it manually. */
 JSON_Value *json_object_dotget_value(const JSON_Object *object,
                                      const char *name);
-/** \brief json_object_dotget_string */
+/**
+ * \\brief json_object_dotget_string
+ * \\param object Parameter object
+ * \\param name Parameter name
+ * \\return Returns const char *
+ */
 const char *json_object_dotget_string(const JSON_Object *object,
                                       const char *name);
-/** \brief json_object_dotget_string_len */
+/**
+ * \\brief json_object_dotget_string_len
+ * \\param object Parameter object
+ * \\param name Parameter name
+ */
 size_t json_object_dotget_string_len(
     const JSON_Object *object,
     const char *name); /** doesn't account for last null character */
+/** \\brief json_object_dotget_object
+ * \\note The returned reference is owned by its parent. Do not free it manually. */
 JSON_Object *json_object_dotget_object(const JSON_Object *object,
                                        const char *name);
-/** \brief json_object_dotget_array */
+/**
+ * \\brief json_object_dotget_array
+ * \\param object Parameter object
+ * \\param name Parameter name
+ * \\return Returns JSON_Array *
+ */
 JSON_Array *json_object_dotget_array(const JSON_Object *object,
                                      const char *name);
-/** \brief json_object_dotget_number */
+/**
+ * \\brief json_object_dotget_number
+ * \\param object Parameter object
+ * \\param name Parameter name
+ */
 double json_object_dotget_number(const JSON_Object *object,
                                  const char *name); /** returns 0 on fail */
+/** \\brief json_object_dotget_boolean */
 int json_object_dotget_boolean(const JSON_Object *object,
                                const char *name); /** returns -1 on fail */
 
 /** Functions to get available names */
+/** \\brief json_object_get_count */
 size_t json_object_get_count(const JSON_Object *object);
-/** \brief json_object_get_name */
+/**
+ * \\brief json_object_get_name
+ * \\param object Parameter object
+ * \\param index Parameter index
+ * \\return Returns const char *
+ */
 const char *json_object_get_name(const JSON_Object *object, size_t index);
-/** \brief json_object_get_value_at */
+/**
+ * \\brief json_object_get_value_at
+ * \\param object Parameter object
+ * \\param index Parameter index
+ * \\return Returns JSON_Value *
+ */
 JSON_Value *json_object_get_value_at(const JSON_Object *object, size_t index);
-/** \brief json_object_get_wrapping_value */
+/**
+ * \\brief json_object_get_wrapping_value
+ * \\param object Parameter object
+ * \\return Returns JSON_Value *
+ */
 JSON_Value *json_object_get_wrapping_value(const JSON_Object *object);
 
 /** Functions to check if object has a value with a specific name. Returned
  * value is 1 if object has a value and 0 if it doesn't. dothas functions behave
  * exactly like dotget functions. */
+/** \\brief json_object_has_value */
 int json_object_has_value(const JSON_Object *object, const char *name);
-/** \brief json_object_has_value_of_type */
+/**
+ * \\brief json_object_has_value_of_type
+ * \\param object Parameter object
+ * \\param name Parameter name
+ * \\param type Parameter type
+ */
 int json_object_has_value_of_type(const JSON_Object *object, const char *name,
                                   JSON_Value_Type type);
 
-/** \brief json_object_dothas_value */
+/**
+ * \\brief json_object_dothas_value
+ * \\param object Parameter object
+ * \\param name Parameter name
+ */
 int json_object_dothas_value(const JSON_Object *object, const char *name);
-/** \brief json_object_dothas_value_of_type */
+/**
+ * \\brief json_object_dothas_value_of_type
+ * \\param object Parameter object
+ * \\param name Parameter name
+ * \\param type Parameter type
+ */
 int json_object_dothas_value_of_type(const JSON_Object *object,
                                      const char *name, JSON_Value_Type type);
 
 /** Creates new name-value pair or frees and replaces old value with a new one.
  * json_object_set_value does not copy passed value so it shouldn't be freed
  * afterwards. */
+/** \\brief json_object_set_value
+ * \\note This function takes ownership of the passed value. Do not free it manually. */
 JSON_Status json_object_set_value(JSON_Object *object, const char *name,
                                   JSON_Value *value);
-/** \brief json_object_set_string */
+/**
+ * \\brief json_object_set_string
+ * \\param object Parameter object
+ * \\param name Parameter name
+ * \\param string Parameter string
+ */
 JSON_Status json_object_set_string(JSON_Object *object, const char *name,
                                    const char *string);
-/** \brief json_object_set_string_with_len */
+/**
+ * \\brief json_object_set_string_with_len
+ * \\param object Parameter object
+ * \\param name Parameter name
+ * \\param string Parameter string
+ * \\param len Parameter len
+ */
 JSON_Status json_object_set_string_with_len(
     JSON_Object *object, const char *name, const char *string,
     size_t len); /** length shouldn't include last null character */
+/** \\brief json_object_set_number */
 JSON_Status json_object_set_number(JSON_Object *object, const char *name,
                                    double number);
-/** \brief json_object_set_boolean */
+/**
+ * \\brief json_object_set_boolean
+ * \\param object Parameter object
+ * \\param name Parameter name
+ * \\param boolean Parameter boolean
+ */
 JSON_Status json_object_set_boolean(JSON_Object *object, const char *name,
                                     int boolean);
-/** \brief json_object_set_null */
+/**
+ * \\brief json_object_set_null
+ * \\param object Parameter object
+ * \\param name Parameter name
+ */
 JSON_Status json_object_set_null(JSON_Object *object, const char *name);
 
 /** Works like dotget functions, but creates whole hierarchy if necessary.
  * json_object_dotset_value does not copy passed value so it shouldn't be freed
  * afterwards. */
+/** \\brief json_object_dotset_value
+ * \\note This function takes ownership of the passed value. Do not free it manually. */
 JSON_Status json_object_dotset_value(JSON_Object *object, const char *name,
                                      JSON_Value *value);
-/** \brief json_object_dotset_string */
+/**
+ * \\brief json_object_dotset_string
+ * \\param object Parameter object
+ * \\param name Parameter name
+ * \\param string Parameter string
+ */
 JSON_Status json_object_dotset_string(JSON_Object *object, const char *name,
                                       const char *string);
-/** \brief json_object_dotset_string_with_len */
+/**
+ * \\brief json_object_dotset_string_with_len
+ * \\param object Parameter object
+ * \\param name Parameter name
+ * \\param string Parameter string
+ * \\param len Parameter len
+ */
 JSON_Status json_object_dotset_string_with_len(
     JSON_Object *object, const char *name, const char *string,
     size_t len); /** length shouldn't include last null character */
+/** \\brief json_object_dotset_number */
 JSON_Status json_object_dotset_number(JSON_Object *object, const char *name,
                                       double number);
-/** \brief json_object_dotset_boolean */
+/**
+ * \\brief json_object_dotset_boolean
+ * \\param object Parameter object
+ * \\param name Parameter name
+ * \\param boolean Parameter boolean
+ */
 JSON_Status json_object_dotset_boolean(JSON_Object *object, const char *name,
                                        int boolean);
-/** \brief json_object_dotset_null */
+/**
+ * \\brief json_object_dotset_null
+ * \\param object Parameter object
+ * \\param name Parameter name
+ */
 JSON_Status json_object_dotset_null(JSON_Object *object, const char *name);
 
 /** Frees and removes name-value pair */
+/** \\brief json_object_remove */
 JSON_Status json_object_remove(JSON_Object *object, const char *name);
 
 /** Works like dotget function, but removes name-value pair only on exact match.
  */
+/** \\brief json_object_dotremove */
 JSON_Status json_object_dotremove(JSON_Object *object, const char *key);
 
 /** Removes all name-value pairs in object */
+/** \\brief json_object_clear */
 JSON_Status json_object_clear(JSON_Object *object);
 
 /**
  *JSON Array
  */
+/** \\brief json_array_get_value
+ * \\note The returned reference is owned by its parent. Do not free it manually. */
 JSON_Value *json_array_get_value(const JSON_Array *array, size_t index);
-/** \brief json_array_get_string */
+/**
+ * \\brief json_array_get_string
+ * \\param array Parameter array
+ * \\param index Parameter index
+ * \\return Returns const char *
+ */
 const char *json_array_get_string(const JSON_Array *array, size_t index);
-/** \brief json_array_get_string_len */
+/**
+ * \\brief json_array_get_string_len
+ * \\param array Parameter array
+ * \\param index Parameter index
+ */
 size_t json_array_get_string_len(
     const JSON_Array *array,
     size_t index); /** doesn't account for last null character */
+/** \\brief json_array_get_object
+ * \\note The returned reference is owned by its parent. Do not free it manually. */
 JSON_Object *json_array_get_object(const JSON_Array *array, size_t index);
-/** \brief json_array_get_array */
+/**
+ * \\brief json_array_get_array
+ * \\param array Parameter array
+ * \\param index Parameter index
+ * \\return Returns JSON_Array *
+ */
 JSON_Array *json_array_get_array(const JSON_Array *array, size_t index);
-/** \brief json_array_get_number */
+/**
+ * \\brief json_array_get_number
+ * \\param array Parameter array
+ * \\param index Parameter index
+ */
 double json_array_get_number(const JSON_Array *array,
                              size_t index); /** returns 0 on fail */
+/** \\brief json_array_get_boolean */
 int json_array_get_boolean(const JSON_Array *array,
                            size_t index); /** returns -1 on fail */
+/** \\brief json_array_get_count */
 size_t json_array_get_count(const JSON_Array *array);
-/** \brief json_array_get_wrapping_value */
+/**
+ * \\brief json_array_get_wrapping_value
+ * \\param array Parameter array
+ * \\return Returns JSON_Value *
+ */
 JSON_Value *json_array_get_wrapping_value(const JSON_Array *array);
 
 /** Frees and removes value at given index, does nothing and returns JSONFailure
  * if index doesn't exist. Order of values in array may change during execution.
  */
+/** \\brief json_array_remove */
 JSON_Status json_array_remove(JSON_Array *array, size_t i);
 
 /** Frees and removes from array value at given index and replaces it with given
  * one. Does nothing and returns JSONFailure if index doesn't exist.
  * json_array_replace_value does not copy passed value so it shouldn't be freed
  * afterwards. */
+/** \\brief json_array_replace_value
+ * \\note This function takes ownership of the passed value. Do not free it manually. */
 JSON_Status json_array_replace_value(JSON_Array *array, size_t i,
                                      JSON_Value *value);
-/** \brief json_array_replace_string */
+/**
+ * \\brief json_array_replace_string
+ * \\param array Parameter array
+ * \\param i Parameter i
+ * \\param string Parameter string
+ */
 JSON_Status json_array_replace_string(JSON_Array *array, size_t i,
                                       const char *string);
-/** \brief json_array_replace_string_with_len */
+/**
+ * \\brief json_array_replace_string_with_len
+ * \\param array Parameter array
+ * \\param i Parameter i
+ * \\param string Parameter string
+ * \\param len Parameter len
+ */
 JSON_Status json_array_replace_string_with_len(
     JSON_Array *array, size_t i, const char *string,
     size_t len); /** length shouldn't include last null character */
+/** \\brief json_array_replace_number */
 JSON_Status json_array_replace_number(JSON_Array *array, size_t i,
                                       double number);
-/** \brief json_array_replace_boolean */
+/**
+ * \\brief json_array_replace_boolean
+ * \\param array Parameter array
+ * \\param i Parameter i
+ * \\param boolean Parameter boolean
+ */
 JSON_Status json_array_replace_boolean(JSON_Array *array, size_t i,
                                        int boolean);
-/** \brief json_array_replace_null */
+/**
+ * \\brief json_array_replace_null
+ * \\param array Parameter array
+ * \\param i Parameter i
+ */
 JSON_Status json_array_replace_null(JSON_Array *array, size_t i);
 
 /** Frees and removes all values from array */
+/** \\brief json_array_clear */
 JSON_Status json_array_clear(JSON_Array *array);
 
 /** Appends new value at the end of array.
  * json_array_append_value does not copy passed value so it shouldn't be freed
  * afterwards. */
+/** \\brief json_array_append_value
+ * \\note This function takes ownership of the passed value. Do not free it manually. */
 JSON_Status json_array_append_value(JSON_Array *array, JSON_Value *value);
-/** \brief json_array_append_string */
+/**
+ * \\brief json_array_append_string
+ * \\param array Parameter array
+ * \\param string Parameter string
+ */
 JSON_Status json_array_append_string(JSON_Array *array, const char *string);
-/** \brief json_array_append_string_with_len */
+/**
+ * \\brief json_array_append_string_with_len
+ * \\param array Parameter array
+ * \\param string Parameter string
+ * \\param len Parameter len
+ */
 JSON_Status json_array_append_string_with_len(
     JSON_Array *array, const char *string,
     size_t len); /** length shouldn't include last null character */
+/** \\brief json_array_append_number */
 JSON_Status json_array_append_number(JSON_Array *array, double number);
-/** \brief json_array_append_boolean */
+/**
+ * \\brief json_array_append_boolean
+ * \\param array Parameter array
+ * \\param boolean Parameter boolean
+ */
 JSON_Status json_array_append_boolean(JSON_Array *array, int boolean);
-/** \brief json_array_append_null */
+/**
+ * \\brief json_array_append_null
+ * \\param array Parameter array
+ */
 JSON_Status json_array_append_null(JSON_Array *array);
 
 /**
  *JSON Value
  */
+/** \\brief json_value_init_object
+ * \\note The returned JSON_Value must be freed with json_value_free(). */
 JSON_Value *json_value_init_object(void);
-/** \brief json_value_init_array */
+/**
+ * \\brief json_value_init_array
+ * \\return Returns JSON_Value *
+ */
 JSON_Value *json_value_init_array(void);
 JSON_Value *
 json_value_init_string(const char *string); /** copies passed string */
+/** \\brief json_value_init_string_with_len
+ * \\note The returned JSON_Value must be freed with json_value_free(). */
 JSON_Value *json_value_init_string_with_len(
     const char *string,
     size_t length); /** copies passed string, length shouldn't include last null
                        character */
+/** \\brief json_value_init_number
+ * \\note The returned JSON_Value must be freed with json_value_free(). */
 JSON_Value *json_value_init_number(double number);
-/** \brief json_value_init_boolean */
+/**
+ * \\brief json_value_init_boolean
+ * \\param boolean Parameter boolean
+ * \\return Returns JSON_Value *
+ */
 JSON_Value *json_value_init_boolean(int boolean);
-/** \brief json_value_init_null */
+/**
+ * \\brief json_value_init_null
+ * \\return Returns JSON_Value *
+ */
 JSON_Value *json_value_init_null(void);
-/** \brief json_value_deep_copy */
+/**
+ * \\brief json_value_deep_copy
+ * \\param value Parameter value
+ * \\return Returns JSON_Value *
+ */
 JSON_Value *json_value_deep_copy(const JSON_Value *value);
-/** \brief json_value_free */
+/**
+ * \\brief json_value_free
+ * \\param value Parameter value
+ */
 void json_value_free(JSON_Value *value);
 
-/** \brief json_value_get_type */
+/**
+ * \\brief json_value_get_type
+ * \\param value Parameter value
+ */
 JSON_Value_Type json_value_get_type(const JSON_Value *value);
-/** \brief json_value_get_object */
+/**
+ * \\brief json_value_get_object
+ * \\param value Parameter value
+ * \\return Returns JSON_Object *
+ */
 JSON_Object *json_value_get_object(const JSON_Value *value);
-/** \brief json_value_get_array */
+/**
+ * \\brief json_value_get_array
+ * \\param value Parameter value
+ * \\return Returns JSON_Array *
+ */
 JSON_Array *json_value_get_array(const JSON_Value *value);
-/** \brief json_value_get_string */
+/**
+ * \\brief json_value_get_string
+ * \\param value Parameter value
+ * \\return Returns const char *
+ */
 const char *json_value_get_string(const JSON_Value *value);
-/** \brief json_value_get_string_len */
+/**
+ * \\brief json_value_get_string_len
+ * \\param value Parameter value
+ */
 size_t json_value_get_string_len(
     const JSON_Value *value); /** doesn't account for last null character */
+/** \\brief json_value_get_number */
 double json_value_get_number(const JSON_Value *value);
-/** \brief json_value_get_boolean */
+/**
+ * \\brief json_value_get_boolean
+ * \\param value Parameter value
+ */
 int json_value_get_boolean(const JSON_Value *value);
-/** \brief json_value_get_parent */
+/**
+ * \\brief json_value_get_parent
+ * \\param value Parameter value
+ * \\return Returns JSON_Value *
+ */
 JSON_Value *json_value_get_parent(const JSON_Value *value);
 
 /** Same as above, but shorter */
+/** \\brief json_type */
 JSON_Value_Type json_type(const JSON_Value *value);
-/** \brief json_object */
+/**
+ * \\brief json_object
+ * \\param value Parameter value
+ * \\return Returns JSON_Object *
+ */
 JSON_Object *json_object(const JSON_Value *value);
-/** \brief json_array */
+/**
+ * \\brief json_array
+ * \\param value Parameter value
+ * \\return Returns JSON_Array *
+ */
 JSON_Array *json_array(const JSON_Value *value);
-/** \brief json_string */
+/**
+ * \\brief json_string
+ * \\param value Parameter value
+ * \\return Returns const char *
+ */
 const char *json_string(const JSON_Value *value);
-/** \brief json_string_len */
+/**
+ * \\brief json_string_len
+ * \\param value Parameter value
+ */
 size_t json_string_len(
     const JSON_Value *value); /** doesn't account for last null character */
+/** \\brief json_number */
 double json_number(const JSON_Value *value);
-/** \brief json_boolean */
+/**
+ * \\brief json_boolean
+ * \\param value Parameter value
+ */
 int json_boolean(const JSON_Value *value);
 
 #ifdef __cplusplus
@@ -422,10 +749,17 @@ int json_boolean(const JSON_Value *value);
 
 #ifdef PARSON_IMPLEMENTATION
 #ifndef PARSON_IMPLEMENTED
+/** \brief Implementation guard */
 #define PARSON_IMPLEMENTED
 
 #ifndef LOG_DEBUG
+/** \\brief Macro for logging debug information */
 #define LOG_DEBUG parson_log_debug
+/**
+ * \\brief parson_log_debug
+ * \\param format Parameter format
+ * \\return Returns static void
+ */
 static void parson_log_debug(const char *format, ...) {
   va_list args;
   va_start(args, format);
@@ -434,8 +768,11 @@ static void parson_log_debug(const char *format, ...) {
 }
 #endif
 
+/** \brief Major implementation version */
 #define PARSON_IMPL_VERSION_MAJOR 1
+/** \brief Minor implementation version */
 #define PARSON_IMPL_VERSION_MINOR 5
+/** \brief Patch implementation version */
 #define PARSON_IMPL_VERSION_PATCH 3
 
 #if (PARSON_VERSION_MAJOR != PARSON_IMPL_VERSION_MAJOR) ||                     \
@@ -448,6 +785,7 @@ static void parson_log_debug(const char *format, ...) {
  * use it, if you don't have to. */
 #ifdef sscanf
 #undef sscanf
+/** \brief Poison sscanf to prevent usage */
 #define sscanf THINK_TWICE_ABOUT_USING_SSCANF
 #endif
 
@@ -455,111 +793,197 @@ static void parson_log_debug(const char *format, ...) {
 #ifdef strcpy
 #undef strcpy
 #endif
+/** \brief Poison strcpy to prevent usage */
 #define strcpy USE_MEMCPY_INSTEAD_OF_STRCPY
 
+/** \\brief Initial capacity for JSON arrays and objects */
 #define STARTING_CAPACITY 16
+/** \\brief Maximum allowed nesting depth for parsed JSON */
 #define MAX_NESTING 2048
 
 #ifndef PARSON_DEFAULT_FLOAT_FORMAT
+/** \brief Default float format */
 #define PARSON_DEFAULT_FLOAT_FORMAT                                            \
   "%1.17g" /* do not increase precision without incresing NUM_BUF_SIZE */
 #endif
 
 #ifndef PARSON_NUM_BUF_SIZE
+/** \brief Size of buffer for number serialization */
 #define PARSON_NUM_BUF_SIZE                                                    \
   64 /* double printed with "%1.17g" shouldn't be longer than 25 bytes so      \
         let's be paranoid and use 64 */
 #endif
 
 #ifndef PARSON_INDENT_STR
+/** \brief String used for indentation in pretty serialization */
 #define PARSON_INDENT_STR "    "
 #endif
 
+/** \\brief Macro to calculate the string length of a token literal */
 #define SIZEOF_TOKEN(a) (sizeof(a) - 1)
+/** \\brief Advances the string pointer by one character */
 #define SKIP_CHAR(str) ((*str)++)
+/** \brief Macro to skip whitespace characters */
 #define SKIP_WHITESPACES(str)                                                  \
   while (isspace((unsigned char)(**str))) {                                    \
     SKIP_CHAR(str);                                                            \
   }
+/** \\brief Returns the maximum of two values */
 #define MAX(a, b) ((a) > (b) ? (a) : (b))
 
 #undef malloc
 #undef free
 
 #if defined(isnan) && defined(isinf)
+/** \brief Check if number is NaN or Inf */
 #define IS_NUMBER_INVALID(x) (isnan((x)) || isinf((x)))
 #else
+/** \brief Check if number is NaN or Inf fallback */
 #define IS_NUMBER_INVALID(x) (((x) * 0.0) != 0.0)
 #endif
 
+/** \\brief Represents an invalid or missing index in a JSON Object */
 #define OBJECT_INVALID_IX ((size_t)-1)
 
+/** \\brief Global malloc function for parson */
 static JSON_Malloc_Function parson_malloc = malloc;
+/** \\brief Global free function for parson */
 static JSON_Free_Function parson_free = free;
 
+/** \\brief Flag to determine if slashes should be escaped during serialization */
 static int parson_escape_slashes = 1;
 
+/** \\brief Global format string for float serialization */
 static char *parson_float_format = NULL;
 
+/** \\brief Custom number serialization function */
 static JSON_Number_Serialization_Function parson_number_serialization_function =
     NULL;
 
+/** \brief Check if byte is a UTF-8 continuation byte */
 #define IS_CONT(b)                                                             \
   (((unsigned char)(b) & 0xC0) == 0x80) /* is utf-8 continuation byte */
 
+/** \\brief parson_bool_t */
 typedef int parson_bool_t;
 
+/** \brief True boolean value */
 #define PARSON_TRUE 1
+/** \brief False boolean value */
 #define PARSON_FALSE 0
 
+/** \\brief json_string */
 typedef struct json_string {
+  /** \\brief Pointer to the string character buffer */
   char *chars;
+  /** \\brief Length of the string */
   size_t length;
 } JSON_String;
 
 /* Type definitions */
+/** \\brief json_value_value */
 typedef union json_value_value {
+  /** \\brief String value */
   JSON_String string;
+  /** \\brief Numeric value */
   double number;
+  /** \\brief Object value */
   JSON_Object *object;
+  /** \\brief Array value */
   JSON_Array *array;
+  /** \\brief Boolean value */
   int boolean;
+  /** \\brief Null value */
   int null;
 } JSON_Value_Value;
 
+/** \\brief json_value_t */
 struct json_value_t {
+  /** \\brief Pointer to the parent value */
   JSON_Value *parent;
+  /** \\brief Type of the JSON value */
   JSON_Value_Type type;
+  /** \\brief Union holding the actual value */
   JSON_Value_Value value;
 };
 
+/** \\brief json_object_t */
 struct json_object_t {
+  /** \\brief Pointer to the wrapping JSON_Value */
   JSON_Value *wrapping_value;
+  /** \\brief Hash table cells */
   size_t *cells;
+  /** \\brief Array of string hashes */
   unsigned long *hashes;
+  /** \\brief Array of key names */
   char **names;
+  /** \\brief Array of JSON_Values */
   JSON_Value **values;
+  /** \\brief Array of cell indices */
   size_t *cell_ixs;
+  /** \\brief Number of items in the object/array */
   size_t count;
+  /** \\brief Capacity of items */
   size_t item_capacity;
+  /** \\brief Capacity of the hash table cells */
   size_t cell_capacity;
 };
 
+/** \\brief json_array_t */
 struct json_array_t {
+  /** \\brief Pointer to the wrapping JSON_Value */
   JSON_Value *wrapping_value;
+  /** \\brief Array of JSON_Values */
   JSON_Value **items;
+  /** \\brief Number of items in the object/array */
   size_t count;
+  /** \\brief Total capacity of the array */
   size_t capacity;
 };
 
 /* Various */
+/**
+ * \\brief read_file
+ * \\param filename Parameter filename
+ * \\return Returns static char *
+ */
 static char *read_file(const char *filename);
+/**
+ * \\brief remove_comments
+ * \\param string Parameter string
+ * \\param start_token Parameter start_token
+ * \\param end_token Parameter end_token
+ * \\return Returns static void
+ */
 static void remove_comments(char *string, const char *start_token,
                             const char *end_token);
+/**
+ * \\brief parson_strndup
+ * \\param string Parameter string
+ * \\param n Parameter n
+ * \\return Returns static char *
+ */
 static char *parson_strndup(const char *string, size_t n);
+/**
+ * \\brief parson_strdup
+ * \\param string Parameter string
+ * \\return Returns static char *
+ */
 static char *parson_strdup(const char *string);
+/**
+ * \\brief parson_sprintf
+ * \\param s Parameter s
+ * \\param format Parameter format
+ * \\return Returns static int
+ */
 static int parson_sprintf(char *s, const char *format, ...);
 
+/**
+ * \\brief parson_fopen
+ * \\param filename Parameter filename
+ * \\param mode Parameter mode
+ * \\return Returns static FILE *
+ */
 static FILE *parson_fopen(const char *filename, const char *mode) {
 #if defined(_MSC_VER)
   FILE *fp = NULL;
@@ -572,67 +996,279 @@ static FILE *parson_fopen(const char *filename, const char *mode) {
 #endif
 }
 
+/**
+ * \\brief hex_char_to_int
+ * \\param c Parameter c
+ * \\return Returns static int
+ */
 static int hex_char_to_int(char c);
+/**
+ * \\brief parse_utf16_hex
+ * \\param string Parameter string
+ * \\param result Parameter result
+ * \\return Returns static JSON_Status
+ */
 static JSON_Status parse_utf16_hex(const char *string, unsigned int *result);
+/**
+ * \\brief num_bytes_in_utf8_sequence
+ * \\param c Parameter c
+ * \\return Returns static int
+ */
 static int num_bytes_in_utf8_sequence(unsigned char c);
+/**
+ * \\brief verify_utf8_sequence
+ * \\param string Parameter string
+ * \\param len Parameter len
+ * \\return Returns static JSON_Status
+ */
 static JSON_Status verify_utf8_sequence(const unsigned char *string, int *len);
+/**
+ * \\brief is_valid_utf8
+ * \\param string Parameter string
+ * \\param string_len Parameter string_len
+ * \\return Returns static parson_bool_t
+ */
 static parson_bool_t is_valid_utf8(const char *string, size_t string_len);
+/**
+ * \\brief is_decimal
+ * \\param string Parameter string
+ * \\param length Parameter length
+ * \\return Returns static parson_bool_t
+ */
 static parson_bool_t is_decimal(const char *string, size_t length);
+/** \\brief Hash string */
 static unsigned long hash_string(const char *string, size_t n);
 
 /* JSON Object */
+/**
+ * \\brief json_object_make
+ * \\param wrapping_value Parameter wrapping_value
+ * \\return Returns static JSON_Object *
+ */
 static JSON_Object *json_object_make(JSON_Value *wrapping_value);
+/**
+ * \\brief json_object_init
+ * \\param object Parameter object
+ * \\param capacity Parameter capacity
+ * \\return Returns static JSON_Status
+ */
 static JSON_Status json_object_init(JSON_Object *object, size_t capacity);
+/**
+ * \\brief json_object_deinit
+ * \\param object Parameter object
+ * \\param free_keys Parameter free_keys
+ * \\param free_values Parameter free_values
+ * \\return Returns static void
+ */
 static void json_object_deinit(JSON_Object *object, parson_bool_t free_keys,
                                parson_bool_t free_values);
+/**
+ * \\brief json_object_grow_and_rehash
+ * \\param object Parameter object
+ * \\return Returns static JSON_Status
+ */
 static JSON_Status json_object_grow_and_rehash(JSON_Object *object);
+/**
+ * \\brief json_object_get_cell_ix
+ * \\param object Parameter object
+ * \\param key Parameter key
+ * \\param key_len Parameter key_len
+ * \\param hash Parameter hash
+ * \\param out_found Parameter out_found
+ * \\return Returns static size_t
+ */
 static size_t json_object_get_cell_ix(const JSON_Object *object,
                                       const char *key, size_t key_len,
                                       unsigned long hash,
                                       parson_bool_t *out_found);
+/**
+ * \\brief json_object_add
+ * \\param object Parameter object
+ * \\param name Parameter name
+ * \\param value Parameter value
+ * \\return Returns static JSON_Status
+ */
 static JSON_Status json_object_add(JSON_Object *object, char *name,
                                    JSON_Value *value);
+/**
+ * \\brief json_object_getn_value
+ * \\param object Parameter object
+ * \\param name Parameter name
+ * \\param name_len Parameter name_len
+ * \\return Returns static JSON_Value *
+ */
 static JSON_Value *json_object_getn_value(const JSON_Object *object,
                                           const char *name, size_t name_len);
+/**
+ * \\brief json_object_remove_internal
+ * \\param object Parameter object
+ * \\param name Parameter name
+ * \\param free_value Parameter free_value
+ * \\return Returns static JSON_Status
+ */
 static JSON_Status json_object_remove_internal(JSON_Object *object,
                                                const char *name,
                                                parson_bool_t free_value);
+/**
+ * \\brief json_object_dotremove_internal
+ * \\param object Parameter object
+ * \\param name Parameter name
+ * \\param free_value Parameter free_value
+ * \\return Returns static JSON_Status
+ */
 static JSON_Status json_object_dotremove_internal(JSON_Object *object,
                                                   const char *name,
                                                   parson_bool_t free_value);
+/**
+ * \\brief json_object_free
+ * \\param object Parameter object
+ * \\return Returns static void
+ */
 static void json_object_free(JSON_Object *object);
 
 /* JSON Array */
+/**
+ * \\brief json_array_make
+ * \\param wrapping_value Parameter wrapping_value
+ * \\return Returns static JSON_Array *
+ */
 static JSON_Array *json_array_make(JSON_Value *wrapping_value);
+/**
+ * \\brief json_array_add
+ * \\param array Parameter array
+ * \\param value Parameter value
+ * \\return Returns static JSON_Status
+ */
 static JSON_Status json_array_add(JSON_Array *array, JSON_Value *value);
+/**
+ * \\brief json_array_resize
+ * \\param array Parameter array
+ * \\param new_capacity Parameter new_capacity
+ * \\return Returns static JSON_Status
+ */
 static JSON_Status json_array_resize(JSON_Array *array, size_t new_capacity);
+/**
+ * \\brief json_array_free
+ * \\param array Parameter array
+ * \\return Returns static void
+ */
 static void json_array_free(JSON_Array *array);
 
 /* JSON Value */
+/**
+ * \\brief json_value_init_string_no_copy
+ * \\param string Parameter string
+ * \\param length Parameter length
+ * \\return Returns static JSON_Value *
+ */
 static JSON_Value *json_value_init_string_no_copy(char *string, size_t length);
+/** \\brief Get string descriptor */
 static const JSON_String *json_value_get_string_desc(const JSON_Value *value);
 
 /* Parser */
+/**
+ * \\brief skip_quotes
+ * \\param string Parameter string
+ * \\return Returns static JSON_Status
+ */
 static JSON_Status skip_quotes(const char **string);
+/**
+ * \\brief parse_utf16
+ * \\param unprocessed Parameter unprocessed
+ * \\param processed Parameter processed
+ * \\return Returns static JSON_Status
+ */
 static JSON_Status parse_utf16(const char **unprocessed, char **processed);
+/**
+ * \\brief process_string
+ * \\param input Parameter input
+ * \\param input_len Parameter input_len
+ * \\param output_len Parameter output_len
+ * \\return Returns static char *
+ */
 static char *process_string(const char *input, size_t input_len,
                             size_t *output_len);
+/**
+ * \\brief get_quoted_string
+ * \\param string Parameter string
+ * \\param output_string_len Parameter output_string_len
+ * \\return Returns static char *
+ */
 static char *get_quoted_string(const char **string, size_t *output_string_len);
+/**
+ * \\brief parse_object_value
+ * \\param string Parameter string
+ * \\param nesting Parameter nesting
+ * \\return Returns static JSON_Value *
+ */
 static JSON_Value *parse_object_value(const char **string, size_t nesting);
+/**
+ * \\brief parse_array_value
+ * \\param string Parameter string
+ * \\param nesting Parameter nesting
+ * \\return Returns static JSON_Value *
+ */
 static JSON_Value *parse_array_value(const char **string, size_t nesting);
+/**
+ * \\brief parse_string_value
+ * \\param string Parameter string
+ * \\return Returns static JSON_Value *
+ */
 static JSON_Value *parse_string_value(const char **string);
+/**
+ * \\brief parse_boolean_value
+ * \\param string Parameter string
+ * \\return Returns static JSON_Value *
+ */
 static JSON_Value *parse_boolean_value(const char **string);
+/**
+ * \\brief parse_number_value
+ * \\param string Parameter string
+ * \\return Returns static JSON_Value *
+ */
 static JSON_Value *parse_number_value(const char **string);
+/**
+ * \\brief parse_null_value
+ * \\param string Parameter string
+ * \\return Returns static JSON_Value *
+ */
 static JSON_Value *parse_null_value(const char **string);
+/**
+ * \\brief parse_value
+ * \\param string Parameter string
+ * \\param nesting Parameter nesting
+ * \\return Returns static JSON_Value *
+ */
 static JSON_Value *parse_value(const char **string, size_t nesting);
 
 /* Serialization */
+/**
+ * \\brief json_serialize_to_buffer_r
+ * \\param value Parameter value
+ * \\param buf Parameter buf
+ * \\param level Parameter level
+ * \\param is_pretty Parameter is_pretty
+ * \\param num_buf Parameter num_buf
+ * \\return Returns static int
+ */
 static int json_serialize_to_buffer_r(const JSON_Value *value, char *buf,
                                       int level, parson_bool_t is_pretty,
                                       char *num_buf);
+/**
+ * \\brief json_serialize_string
+ * \\param string Parameter string
+ * \\param len Parameter len
+ * \\param buf Parameter buf
+ * \\return Returns static int
+ */
 static int json_serialize_string(const char *string, size_t len, char *buf);
 
 /* Various */
+/**
+ * \\brief read_file
+ * \\param filename Parameter filename
+ * \\return Returns static char *
+ */
 static char *read_file(const char *filename) {
   FILE *fp = parson_fopen(filename, "r");
   size_t size_to_read = 0;
@@ -670,6 +1306,13 @@ static char *read_file(const char *filename) {
   return file_contents;
 }
 
+/**
+ * \\brief remove_comments
+ * \\param string Parameter string
+ * \\param start_token Parameter start_token
+ * \\param end_token Parameter end_token
+ * \\return Returns static void
+ */
 static void remove_comments(char *string, const char *start_token,
                             const char *end_token) {
   parson_bool_t in_string = PARSON_FALSE, escaped = PARSON_FALSE;
@@ -707,6 +1350,12 @@ static void remove_comments(char *string, const char *start_token,
   }
 }
 
+/**
+ * \\brief parson_strndup
+ * \\param string Parameter string
+ * \\param n Parameter n
+ * \\return Returns static char *
+ */
 static char *parson_strndup(const char *string, size_t n) {
   /* We expect the caller has validated that 'n' fits within the input buffer.
    */
@@ -720,10 +1369,21 @@ static char *parson_strndup(const char *string, size_t n) {
   return output_string;
 }
 
+/**
+ * \\brief parson_strdup
+ * \\param string Parameter string
+ * \\return Returns static char *
+ */
 static char *parson_strdup(const char *string) {
   return parson_strndup(string, strlen(string));
 }
 
+/**
+ * \\brief parson_sprintf
+ * \\param s Parameter s
+ * \\param format Parameter format
+ * \\return Returns static int
+ */
 static int parson_sprintf(char *s, const char *format, ...) {
   int result;
   va_list args;
@@ -746,6 +1406,11 @@ static int parson_sprintf(char *s, const char *format, ...) {
   return result;
 }
 
+/**
+ * \\brief hex_char_to_int
+ * \\param c Parameter c
+ * \\return Returns static int
+ */
 static int hex_char_to_int(char c) {
   if (c >= '0' && c <= '9') {
     return c - '0';
@@ -757,6 +1422,12 @@ static int hex_char_to_int(char c) {
   return -1;
 }
 
+/**
+ * \\brief parse_utf16_hex
+ * \\param s Parameter s
+ * \\param result Parameter result
+ * \\return Returns static JSON_Status
+ */
 static JSON_Status parse_utf16_hex(const char *s, unsigned int *result) {
   int x1, x2, x3, x4;
   if (s[0] == '\0' || s[1] == '\0' || s[2] == '\0' || s[3] == '\0') {
@@ -773,6 +1444,11 @@ static JSON_Status parse_utf16_hex(const char *s, unsigned int *result) {
   return JSONSuccess;
 }
 
+/**
+ * \\brief num_bytes_in_utf8_sequence
+ * \\param c Parameter c
+ * \\return Returns static int
+ */
 static int num_bytes_in_utf8_sequence(unsigned char c) {
   if (c == 0xC0 || c == 0xC1 || c > 0xF4 || IS_CONT(c)) {
     return 0;
@@ -788,6 +1464,12 @@ static int num_bytes_in_utf8_sequence(unsigned char c) {
   return 0; /* won't happen */
 }
 
+/**
+ * \\brief verify_utf8_sequence
+ * \\param string Parameter string
+ * \\param len Parameter len
+ * \\return Returns static JSON_Status
+ */
 static JSON_Status verify_utf8_sequence(const unsigned char *string, int *len) {
   unsigned int cp = 0;
   *len = num_bytes_in_utf8_sequence(string[0]);
@@ -830,6 +1512,12 @@ static JSON_Status verify_utf8_sequence(const unsigned char *string, int *len) {
   return JSONSuccess;
 }
 
+/**
+ * \\brief is_valid_utf8
+ * \\param string Parameter string
+ * \\param string_len Parameter string_len
+ * \\return Returns static int
+ */
 static int is_valid_utf8(const char *string, size_t string_len) {
   int len = 0;
   const char *string_end = string + string_len;
@@ -843,6 +1531,12 @@ static int is_valid_utf8(const char *string, size_t string_len) {
   return PARSON_TRUE;
 }
 
+/**
+ * \\brief is_decimal
+ * \\param string Parameter string
+ * \\param length Parameter length
+ * \\return Returns static parson_bool_t
+ */
 static parson_bool_t is_decimal(const char *string, size_t length) {
   if (length > 1 && string[0] == '0' && string[1] != '.') {
     return PARSON_FALSE;
@@ -858,6 +1552,7 @@ static parson_bool_t is_decimal(const char *string, size_t length) {
   return PARSON_TRUE;
 }
 
+/** \\brief Implementation of hash_string */
 static unsigned long hash_string(const char *string, size_t n) {
 #ifdef PARSON_FORCE_HASH_COLLISIONS
   (void)string;
@@ -879,6 +1574,11 @@ static unsigned long hash_string(const char *string, size_t n) {
 }
 
 /* JSON Object */
+/**
+ * \\brief json_object_make
+ * \\param wrapping_value Parameter wrapping_value
+ * \\return Returns static JSON_Object *
+ */
 static JSON_Object *json_object_make(JSON_Value *wrapping_value) {
   JSON_Status res = JSONFailure;
   JSON_Object *new_obj = (JSON_Object *)parson_malloc(sizeof(JSON_Object));
@@ -896,6 +1596,12 @@ static JSON_Object *json_object_make(JSON_Value *wrapping_value) {
   return new_obj;
 }
 
+/**
+ * \\brief json_object_init
+ * \\param object Parameter object
+ * \\param capacity Parameter capacity
+ * \\return Returns static JSON_Status
+ */
 static JSON_Status json_object_init(JSON_Object *object, size_t capacity) {
   unsigned int i = 0;
 
@@ -942,6 +1648,13 @@ error:
   return JSONFailure;
 }
 
+/**
+ * \\brief json_object_deinit
+ * \\param object Parameter object
+ * \\param free_keys Parameter free_keys
+ * \\param free_values Parameter free_values
+ * \\return Returns static void
+ */
 static void json_object_deinit(JSON_Object *object, parson_bool_t free_keys,
                                parson_bool_t free_values) {
   unsigned int i = 0;
@@ -971,6 +1684,11 @@ static void json_object_deinit(JSON_Object *object, parson_bool_t free_keys,
   object->hashes = NULL;
 }
 
+/**
+ * \\brief json_object_grow_and_rehash
+ * \\param object Parameter object
+ * \\return Returns static JSON_Status
+ */
 static JSON_Status json_object_grow_and_rehash(JSON_Object *object) {
   JSON_Value *wrapping_value = NULL;
   JSON_Object new_object;
@@ -1002,6 +1720,15 @@ static JSON_Status json_object_grow_and_rehash(JSON_Object *object) {
   return JSONSuccess;
 }
 
+/**
+ * \\brief json_object_get_cell_ix
+ * \\param object Parameter object
+ * \\param key Parameter key
+ * \\param key_len Parameter key_len
+ * \\param hash Parameter hash
+ * \\param out_found Parameter out_found
+ * \\return Returns static size_t
+ */
 static size_t json_object_get_cell_ix(const JSON_Object *object,
                                       const char *key, size_t key_len,
                                       unsigned long hash,
@@ -1037,6 +1764,13 @@ static size_t json_object_get_cell_ix(const JSON_Object *object,
   return OBJECT_INVALID_IX;
 }
 
+/**
+ * \\brief json_object_add
+ * \\param object Parameter object
+ * \\param name Parameter name
+ * \\param value Parameter value
+ * \\return Returns static JSON_Status
+ */
 static JSON_Status json_object_add(JSON_Object *object, char *name,
                                    JSON_Value *value) {
   unsigned long hash = 0;
@@ -1074,6 +1808,13 @@ static JSON_Status json_object_add(JSON_Object *object, char *name,
   return JSONSuccess;
 }
 
+/**
+ * \\brief json_object_getn_value
+ * \\param object Parameter object
+ * \\param name Parameter name
+ * \\param name_len Parameter name_len
+ * \\return Returns static JSON_Value *
+ */
 static JSON_Value *json_object_getn_value(const JSON_Object *object,
                                           const char *name, size_t name_len) {
   unsigned long hash = 0;
@@ -1093,6 +1834,13 @@ static JSON_Value *json_object_getn_value(const JSON_Object *object,
   return object->values[item_ix];
 }
 
+/**
+ * \\brief json_object_remove_internal
+ * \\param object Parameter object
+ * \\param name Parameter name
+ * \\param free_value Parameter free_value
+ * \\return Returns static JSON_Status
+ */
 static JSON_Status json_object_remove_internal(JSON_Object *object,
                                                const char *name,
                                                parson_bool_t free_value) {
@@ -1157,6 +1905,13 @@ static JSON_Status json_object_remove_internal(JSON_Object *object,
   return JSONSuccess;
 }
 
+/**
+ * \\brief json_object_dotremove_internal
+ * \\param object Parameter object
+ * \\param name Parameter name
+ * \\param free_value Parameter free_value
+ * \\return Returns static JSON_Status
+ */
 static JSON_Status json_object_dotremove_internal(JSON_Object *object,
                                                   const char *name,
                                                   parson_bool_t free_value) {
@@ -1174,12 +1929,22 @@ static JSON_Status json_object_dotremove_internal(JSON_Object *object,
   return json_object_dotremove_internal(temp_object, dot_pos + 1, free_value);
 }
 
+/**
+ * \\brief json_object_free
+ * \\param object Parameter object
+ * \\return Returns static void
+ */
 static void json_object_free(JSON_Object *object) {
   json_object_deinit(object, PARSON_TRUE, PARSON_TRUE);
   parson_free(object);
 }
 
 /* JSON Array */
+/**
+ * \\brief json_array_make
+ * \\param wrapping_value Parameter wrapping_value
+ * \\return Returns static JSON_Array *
+ */
 static JSON_Array *json_array_make(JSON_Value *wrapping_value) {
   JSON_Array *new_array = (JSON_Array *)parson_malloc(sizeof(JSON_Array));
   if (new_array == NULL) {
@@ -1193,6 +1958,12 @@ static JSON_Array *json_array_make(JSON_Value *wrapping_value) {
   return new_array;
 }
 
+/**
+ * \\brief json_array_add
+ * \\param array Parameter array
+ * \\param value Parameter value
+ * \\return Returns static JSON_Status
+ */
 static JSON_Status json_array_add(JSON_Array *array, JSON_Value *value) {
   if (array->count >= array->capacity) {
     size_t new_capacity = MAX(array->capacity * 2, STARTING_CAPACITY);
@@ -1206,6 +1977,12 @@ static JSON_Status json_array_add(JSON_Array *array, JSON_Value *value) {
   return JSONSuccess;
 }
 
+/**
+ * \\brief json_array_resize
+ * \\param array Parameter array
+ * \\param new_capacity Parameter new_capacity
+ * \\return Returns static JSON_Status
+ */
 static JSON_Status json_array_resize(JSON_Array *array, size_t new_capacity) {
   JSON_Value **new_items = NULL;
   if (new_capacity == 0) {
@@ -1225,6 +2002,11 @@ static JSON_Status json_array_resize(JSON_Array *array, size_t new_capacity) {
   return JSONSuccess;
 }
 
+/**
+ * \\brief json_array_free
+ * \\param array Parameter array
+ * \\return Returns static void
+ */
 static void json_array_free(JSON_Array *array) {
   size_t i;
   for (i = 0; i < array->count; i++) {
@@ -1235,6 +2017,12 @@ static void json_array_free(JSON_Array *array) {
 }
 
 /* JSON Value */
+/**
+ * \\brief json_value_init_string_no_copy
+ * \\param string Parameter string
+ * \\param length Parameter length
+ * \\return Returns static JSON_Value *
+ */
 static JSON_Value *json_value_init_string_no_copy(char *string, size_t length) {
   JSON_Value *new_value = (JSON_Value *)parson_malloc(sizeof(JSON_Value));
   if (!new_value) {
@@ -1249,6 +2037,11 @@ static JSON_Value *json_value_init_string_no_copy(char *string, size_t length) {
 }
 
 /* Parser */
+/**
+ * \\brief skip_quotes
+ * \\param string Parameter string
+ * \\return Returns static JSON_Status
+ */
 static JSON_Status skip_quotes(const char **string) {
   if (**string != '\"') {
     return JSONFailure;
@@ -1269,6 +2062,12 @@ static JSON_Status skip_quotes(const char **string) {
   return JSONSuccess;
 }
 
+/**
+ * \\brief parse_utf16
+ * \\param unprocessed Parameter unprocessed
+ * \\param processed Parameter processed
+ * \\return Returns static JSON_Status
+ */
 static JSON_Status parse_utf16(const char **unprocessed, char **processed) {
   unsigned int cp, lead, trail;
   char *processed_ptr = *processed;
@@ -1321,6 +2120,13 @@ static JSON_Status parse_utf16(const char **unprocessed, char **processed) {
 
 /* Copies and processes passed string up to supplied length.
 Example: "\u006Corem ipsum" -> lorem ipsum */
+/**
+ * \\brief process_string
+ * \\param input Parameter input
+ * \\param input_len Parameter input_len
+ * \\param output_len Parameter output_len
+ * \\return Returns static char *
+ */
 static char *process_string(const char *input, size_t input_len,
                             size_t *output_len) {
   const char *input_ptr = input;
@@ -1398,6 +2204,12 @@ error:
 
 /* Return processed contents of a string between quotes and
    skips passed argument to a matching quote. */
+/**
+ * \\brief get_quoted_string
+ * \\param string Parameter string
+ * \\param output_string_len Parameter output_string_len
+ * \\return Returns static char *
+ */
 static char *get_quoted_string(const char **string, size_t *output_string_len) {
   const char *string_start = *string;
   size_t input_string_len = 0;
@@ -1409,6 +2221,12 @@ static char *get_quoted_string(const char **string, size_t *output_string_len) {
   return process_string(string_start + 1, input_string_len, output_string_len);
 }
 
+/**
+ * \\brief parse_value
+ * \\param string Parameter string
+ * \\param nesting Parameter nesting
+ * \\return Returns static JSON_Value *
+ */
 static JSON_Value *parse_value(const char **string, size_t nesting) {
   if (nesting > MAX_NESTING) {
     return NULL;
@@ -1443,6 +2261,12 @@ static JSON_Value *parse_value(const char **string, size_t nesting) {
   }
 }
 
+/**
+ * \\brief parse_object_value
+ * \\param string Parameter string
+ * \\param nesting Parameter nesting
+ * \\return Returns static JSON_Value *
+ */
 static JSON_Value *parse_object_value(const char **string, size_t nesting) {
   JSON_Status status = JSONFailure;
   JSON_Value *output_value = NULL, *new_value = NULL;
@@ -1517,6 +2341,12 @@ static JSON_Value *parse_object_value(const char **string, size_t nesting) {
   return output_value;
 }
 
+/**
+ * \\brief parse_array_value
+ * \\param string Parameter string
+ * \\param nesting Parameter nesting
+ * \\return Returns static JSON_Value *
+ */
 static JSON_Value *parse_array_value(const char **string, size_t nesting) {
   JSON_Value *output_value = NULL, *new_array_value = NULL;
   JSON_Array *output_array = NULL;
@@ -1568,6 +2398,11 @@ static JSON_Value *parse_array_value(const char **string, size_t nesting) {
   return output_value;
 }
 
+/**
+ * \\brief parse_string_value
+ * \\param string Parameter string
+ * \\return Returns static JSON_Value *
+ */
 static JSON_Value *parse_string_value(const char **string) {
   JSON_Value *value = NULL;
   size_t new_string_len = 0;
@@ -1583,6 +2418,11 @@ static JSON_Value *parse_string_value(const char **string) {
   return value;
 }
 
+/**
+ * \\brief parse_boolean_value
+ * \\param string Parameter string
+ * \\return Returns static JSON_Value *
+ */
 static JSON_Value *parse_boolean_value(const char **string) {
   size_t true_token_size = SIZEOF_TOKEN("true");
   size_t false_token_size = SIZEOF_TOKEN("false");
@@ -1596,6 +2436,11 @@ static JSON_Value *parse_boolean_value(const char **string) {
   return NULL;
 }
 
+/**
+ * \\brief parse_number_value
+ * \\param string Parameter string
+ * \\return Returns static JSON_Value *
+ */
 static JSON_Value *parse_number_value(const char **string) {
   char *end;
   double number = 0;
@@ -1611,6 +2456,11 @@ static JSON_Value *parse_number_value(const char **string) {
   return json_value_init_number(number);
 }
 
+/**
+ * \\brief parse_null_value
+ * \\param string Parameter string
+ * \\return Returns static JSON_Value *
+ */
 static JSON_Value *parse_null_value(const char **string) {
   size_t token_size = SIZEOF_TOKEN("null");
   if (strncmp("null", *string, token_size) == 0) {
@@ -1627,6 +2477,7 @@ static JSON_Value *parse_null_value(const char **string) {
    state and should eventually be tidied up into a function (same goes for
    APPEND_INDENT)
  */
+/** \brief Macro to append string */
 #define APPEND_STRING(str)                                                     \
   do {                                                                         \
     written = SIZEOF_TOKEN((str));                                             \
@@ -1638,6 +2489,7 @@ static JSON_Value *parse_null_value(const char **string) {
     written_total += written;                                                  \
   } while (0)
 
+/** \brief Macro to append indentation */
 #define APPEND_INDENT(level)                                                   \
   do {                                                                         \
     int level_i = 0;                                                           \
@@ -1646,6 +2498,15 @@ static JSON_Value *parse_null_value(const char **string) {
     }                                                                          \
   } while (0)
 
+/**
+ * \\brief json_serialize_to_buffer_r
+ * \\param value Parameter value
+ * \\param buf Parameter buf
+ * \\param level Parameter level
+ * \\param is_pretty Parameter is_pretty
+ * \\param num_buf Parameter num_buf
+ * \\return Returns static int
+ */
 static int json_serialize_to_buffer_r(const JSON_Value *value, char *buf,
                                       int level, parson_bool_t is_pretty,
                                       char *num_buf) {
@@ -1794,6 +2655,13 @@ static int json_serialize_to_buffer_r(const JSON_Value *value, char *buf,
   }
 }
 
+/**
+ * \\brief json_serialize_string
+ * \\param string Parameter string
+ * \\param len Parameter len
+ * \\param buf Parameter buf
+ * \\return Returns static int
+ */
 static int json_serialize_string(const char *string, size_t len, char *buf) {
   size_t i = 0;
   char c = '\0';
@@ -1933,6 +2801,8 @@ static int json_serialize_string(const char *string, size_t len, char *buf) {
 #undef APPEND_INDENT
 
 /* Parser API */
+/** \\brief json_parse_file
+ * \\note The returned JSON_Value must be freed with json_value_free(). */
 JSON_Value *json_parse_file(const char *filename) {
   char *file_contents = read_file(filename);
   JSON_Value *output_value = NULL;
@@ -1944,7 +2814,11 @@ JSON_Value *json_parse_file(const char *filename) {
   return output_value;
 }
 
-/** \brief json_parse_file_with_comments */
+/**
+ * \\brief json_parse_file_with_comments
+ * \\param filename Parameter filename
+ * \\return Returns JSON_Value *
+ */
 JSON_Value *json_parse_file_with_comments(const char *filename) {
   char *file_contents = read_file(filename);
   JSON_Value *output_value = NULL;
@@ -1956,7 +2830,11 @@ JSON_Value *json_parse_file_with_comments(const char *filename) {
   return output_value;
 }
 
-/** \brief json_parse_string */
+/**
+ * \\brief json_parse_string
+ * \\param string Parameter string
+ * \\return Returns JSON_Value *
+ */
 JSON_Value *json_parse_string(const char *string) {
   if (string == NULL) {
     return NULL;
@@ -1967,7 +2845,11 @@ JSON_Value *json_parse_string(const char *string) {
   return parse_value((const char **)&string, 0);
 }
 
-/** \brief json_parse_string_with_comments */
+/**
+ * \\brief json_parse_string_with_comments
+ * \\param string Parameter string
+ * \\return Returns JSON_Value *
+ */
 JSON_Value *json_parse_string_with_comments(const char *string) {
   JSON_Value *result = NULL;
   char *string_mutable_copy = NULL, *string_mutable_copy_ptr = NULL;
@@ -1985,7 +2867,12 @@ JSON_Value *json_parse_string_with_comments(const char *string) {
 
 /* JSON Object API */
 
-/** \brief json_object_get_value */
+/**
+ * \\brief json_object_get_value
+ * \\param object Parameter object
+ * \\param name Parameter name
+ * \\return Returns JSON_Value *
+ */
 JSON_Value *json_object_get_value(const JSON_Object *object, const char *name) {
   if (object == NULL || name == NULL) {
     return NULL;
@@ -1993,38 +2880,66 @@ JSON_Value *json_object_get_value(const JSON_Object *object, const char *name) {
   return json_object_getn_value(object, name, strlen(name));
 }
 
+/** \\brief json_object_get_string */
 const char *json_object_get_string(const JSON_Object *object,
                                    const char *name) {
   return json_value_get_string(json_object_get_value(object, name));
 }
 
-/** \brief json_object_get_string_len */
+/**
+ * \\brief json_object_get_string_len
+ * \\param object Parameter object
+ * \\param name Parameter name
+ */
 size_t json_object_get_string_len(const JSON_Object *object, const char *name) {
   return json_value_get_string_len(json_object_get_value(object, name));
 }
 
-/** \brief json_object_get_number */
+/**
+ * \\brief json_object_get_number
+ * \\param object Parameter object
+ * \\param name Parameter name
+ */
 double json_object_get_number(const JSON_Object *object, const char *name) {
   return json_value_get_number(json_object_get_value(object, name));
 }
 
-/** \brief json_object_get_object */
+/**
+ * \\brief json_object_get_object
+ * \\param object Parameter object
+ * \\param name Parameter name
+ * \\return Returns JSON_Object *
+ */
 JSON_Object *json_object_get_object(const JSON_Object *object,
                                     const char *name) {
   return json_value_get_object(json_object_get_value(object, name));
 }
 
-/** \brief json_object_get_array */
+/**
+ * \\brief json_object_get_array
+ * \\param object Parameter object
+ * \\param name Parameter name
+ * \\return Returns JSON_Array *
+ */
 JSON_Array *json_object_get_array(const JSON_Object *object, const char *name) {
   return json_value_get_array(json_object_get_value(object, name));
 }
 
-/** \brief json_object_get_boolean */
+/**
+ * \\brief json_object_get_boolean
+ * \\param object Parameter object
+ * \\param name Parameter name
+ */
 int json_object_get_boolean(const JSON_Object *object, const char *name) {
   return json_value_get_boolean(json_object_get_value(object, name));
 }
 
-/** \brief json_object_dotget_value */
+/**
+ * \\brief json_object_dotget_value
+ * \\param object Parameter object
+ * \\param name Parameter name
+ * \\return Returns JSON_Value *
+ */
 JSON_Value *json_object_dotget_value(const JSON_Object *object,
                                      const char *name) {
   const char *dot_position = strchr(name, '.');
@@ -2036,44 +2951,71 @@ JSON_Value *json_object_dotget_value(const JSON_Object *object,
   return json_object_dotget_value(object, dot_position + 1);
 }
 
+/** \\brief json_object_dotget_string */
 const char *json_object_dotget_string(const JSON_Object *object,
                                       const char *name) {
   return json_value_get_string(json_object_dotget_value(object, name));
 }
 
-/** \brief json_object_dotget_string_len */
+/**
+ * \\brief json_object_dotget_string_len
+ * \\param object Parameter object
+ * \\param name Parameter name
+ */
 size_t json_object_dotget_string_len(const JSON_Object *object,
                                      const char *name) {
   return json_value_get_string_len(json_object_dotget_value(object, name));
 }
 
-/** \brief json_object_dotget_number */
+/**
+ * \\brief json_object_dotget_number
+ * \\param object Parameter object
+ * \\param name Parameter name
+ */
 double json_object_dotget_number(const JSON_Object *object, const char *name) {
   return json_value_get_number(json_object_dotget_value(object, name));
 }
 
-/** \brief json_object_dotget_object */
+/**
+ * \\brief json_object_dotget_object
+ * \\param object Parameter object
+ * \\param name Parameter name
+ * \\return Returns JSON_Object *
+ */
 JSON_Object *json_object_dotget_object(const JSON_Object *object,
                                        const char *name) {
   return json_value_get_object(json_object_dotget_value(object, name));
 }
 
-/** \brief json_object_dotget_array */
+/**
+ * \\brief json_object_dotget_array
+ * \\param object Parameter object
+ * \\param name Parameter name
+ * \\return Returns JSON_Array *
+ */
 JSON_Array *json_object_dotget_array(const JSON_Object *object,
                                      const char *name) {
   return json_value_get_array(json_object_dotget_value(object, name));
 }
 
-/** \brief json_object_dotget_boolean */
+/**
+ * \\brief json_object_dotget_boolean
+ * \\param object Parameter object
+ * \\param name Parameter name
+ */
 int json_object_dotget_boolean(const JSON_Object *object, const char *name) {
   return json_value_get_boolean(json_object_dotget_value(object, name));
 }
 
-/** \brief json_object_get_count */
+/**
+ * \\brief json_object_get_count
+ * \\param object Parameter object
+ */
 size_t json_object_get_count(const JSON_Object *object) {
   return object ? object->count : 0;
 }
 
+/** \\brief json_object_get_name */
 const char *json_object_get_name(const JSON_Object *object, size_t index) {
   if (object == NULL || index >= json_object_get_count(object)) {
     return NULL;
@@ -2081,7 +3023,12 @@ const char *json_object_get_name(const JSON_Object *object, size_t index) {
   return object->names[index];
 }
 
-/** \brief json_object_get_value_at */
+/**
+ * \\brief json_object_get_value_at
+ * \\param object Parameter object
+ * \\param index Parameter index
+ * \\return Returns JSON_Value *
+ */
 JSON_Value *json_object_get_value_at(const JSON_Object *object, size_t index) {
   if (object == NULL || index >= json_object_get_count(object)) {
     return NULL;
@@ -2089,7 +3036,11 @@ JSON_Value *json_object_get_value_at(const JSON_Object *object, size_t index) {
   return object->values[index];
 }
 
-/** \brief json_object_get_wrapping_value */
+/**
+ * \\brief json_object_get_wrapping_value
+ * \\param object Parameter object
+ * \\return Returns JSON_Value *
+ */
 JSON_Value *json_object_get_wrapping_value(const JSON_Object *object) {
   if (!object) {
     return NULL;
@@ -2097,24 +3048,42 @@ JSON_Value *json_object_get_wrapping_value(const JSON_Object *object) {
   return object->wrapping_value;
 }
 
-/** \brief json_object_has_value */
+/**
+ * \\brief json_object_has_value
+ * \\param object Parameter object
+ * \\param name Parameter name
+ */
 int json_object_has_value(const JSON_Object *object, const char *name) {
   return json_object_get_value(object, name) != NULL;
 }
 
-/** \brief json_object_has_value_of_type */
+/**
+ * \\brief json_object_has_value_of_type
+ * \\param object Parameter object
+ * \\param name Parameter name
+ * \\param type Parameter type
+ */
 int json_object_has_value_of_type(const JSON_Object *object, const char *name,
                                   JSON_Value_Type type) {
   JSON_Value *val = json_object_get_value(object, name);
   return val != NULL && json_value_get_type(val) == type;
 }
 
-/** \brief json_object_dothas_value */
+/**
+ * \\brief json_object_dothas_value
+ * \\param object Parameter object
+ * \\param name Parameter name
+ */
 int json_object_dothas_value(const JSON_Object *object, const char *name) {
   return json_object_dotget_value(object, name) != NULL;
 }
 
-/** \brief json_object_dothas_value_of_type */
+/**
+ * \\brief json_object_dothas_value_of_type
+ * \\param object Parameter object
+ * \\param name Parameter name
+ * \\param type Parameter type
+ */
 int json_object_dothas_value_of_type(const JSON_Object *object,
                                      const char *name, JSON_Value_Type type) {
   JSON_Value *val = json_object_dotget_value(object, name);
@@ -2122,6 +3091,8 @@ int json_object_dothas_value_of_type(const JSON_Object *object,
 }
 
 /* JSON Array API */
+/** \\brief json_array_get_value
+ * \\note The returned reference is owned by its parent. Do not free it manually. */
 JSON_Value *json_array_get_value(const JSON_Array *array, size_t index) {
   if (array == NULL || index >= json_array_get_count(array)) {
     return NULL;
@@ -2129,41 +3100,71 @@ JSON_Value *json_array_get_value(const JSON_Array *array, size_t index) {
   return array->items[index];
 }
 
+/** \\brief json_array_get_string */
 const char *json_array_get_string(const JSON_Array *array, size_t index) {
   return json_value_get_string(json_array_get_value(array, index));
 }
 
-/** \brief json_array_get_string_len */
+/**
+ * \\brief json_array_get_string_len
+ * \\param array Parameter array
+ * \\param index Parameter index
+ */
 size_t json_array_get_string_len(const JSON_Array *array, size_t index) {
   return json_value_get_string_len(json_array_get_value(array, index));
 }
 
-/** \brief json_array_get_number */
+/**
+ * \\brief json_array_get_number
+ * \\param array Parameter array
+ * \\param index Parameter index
+ */
 double json_array_get_number(const JSON_Array *array, size_t index) {
   return json_value_get_number(json_array_get_value(array, index));
 }
 
-/** \brief json_array_get_object */
+/**
+ * \\brief json_array_get_object
+ * \\param array Parameter array
+ * \\param index Parameter index
+ * \\return Returns JSON_Object *
+ */
 JSON_Object *json_array_get_object(const JSON_Array *array, size_t index) {
   return json_value_get_object(json_array_get_value(array, index));
 }
 
-/** \brief json_array_get_array */
+/**
+ * \\brief json_array_get_array
+ * \\param array Parameter array
+ * \\param index Parameter index
+ * \\return Returns JSON_Array *
+ */
 JSON_Array *json_array_get_array(const JSON_Array *array, size_t index) {
   return json_value_get_array(json_array_get_value(array, index));
 }
 
-/** \brief json_array_get_boolean */
+/**
+ * \\brief json_array_get_boolean
+ * \\param array Parameter array
+ * \\param index Parameter index
+ */
 int json_array_get_boolean(const JSON_Array *array, size_t index) {
   return json_value_get_boolean(json_array_get_value(array, index));
 }
 
-/** \brief json_array_get_count */
+/**
+ * \\brief json_array_get_count
+ * \\param array Parameter array
+ */
 size_t json_array_get_count(const JSON_Array *array) {
   return array ? array->count : 0;
 }
 
-/** \brief json_array_get_wrapping_value */
+/**
+ * \\brief json_array_get_wrapping_value
+ * \\param array Parameter array
+ * \\return Returns JSON_Value *
+ */
 JSON_Value *json_array_get_wrapping_value(const JSON_Array *array) {
   if (!array) {
     return NULL;
@@ -2172,51 +3173,78 @@ JSON_Value *json_array_get_wrapping_value(const JSON_Array *array) {
 }
 
 /* JSON Value API */
+/** \\brief json_value_get_type */
 JSON_Value_Type json_value_get_type(const JSON_Value *value) {
   return value ? value->type : JSONError;
 }
 
-/** \brief json_value_get_object */
+/**
+ * \\brief json_value_get_object
+ * \\param value Parameter value
+ * \\return Returns JSON_Object *
+ */
 JSON_Object *json_value_get_object(const JSON_Value *value) {
   return json_value_get_type(value) == JSONObject ? value->value.object : NULL;
 }
 
-/** \brief json_value_get_array */
+/**
+ * \\brief json_value_get_array
+ * \\param value Parameter value
+ * \\return Returns JSON_Array *
+ */
 JSON_Array *json_value_get_array(const JSON_Value *value) {
   return json_value_get_type(value) == JSONArray ? value->value.array : NULL;
 }
 
+/** \\brief Implementation of json_value_get_string_desc */
 static const JSON_String *json_value_get_string_desc(const JSON_Value *value) {
   return json_value_get_type(value) == JSONString ? &value->value.string : NULL;
 }
 
+/** \\brief json_value_get_string */
 const char *json_value_get_string(const JSON_Value *value) {
   const JSON_String *str = json_value_get_string_desc(value);
   return str ? str->chars : NULL;
 }
 
-/** \brief json_value_get_string_len */
+/**
+ * \\brief json_value_get_string_len
+ * \\param value Parameter value
+ */
 size_t json_value_get_string_len(const JSON_Value *value) {
   const JSON_String *str = json_value_get_string_desc(value);
   return str ? str->length : 0;
 }
 
-/** \brief json_value_get_number */
+/**
+ * \\brief json_value_get_number
+ * \\param value Parameter value
+ */
 double json_value_get_number(const JSON_Value *value) {
   return json_value_get_type(value) == JSONNumber ? value->value.number : 0;
 }
 
-/** \brief json_value_get_boolean */
+/**
+ * \\brief json_value_get_boolean
+ * \\param value Parameter value
+ */
 int json_value_get_boolean(const JSON_Value *value) {
   return json_value_get_type(value) == JSONBoolean ? value->value.boolean : -1;
 }
 
-/** \brief json_value_get_parent */
+/**
+ * \\brief json_value_get_parent
+ * \\param value Parameter value
+ * \\return Returns JSON_Value *
+ */
 JSON_Value *json_value_get_parent(const JSON_Value *value) {
   return value ? value->parent : NULL;
 }
 
-/** \brief json_value_free */
+/**
+ * \\brief json_value_free
+ * \\param value Parameter value
+ */
 void json_value_free(JSON_Value *value) {
   switch (json_value_get_type(value)) {
   case JSONObject:
@@ -2234,7 +3262,10 @@ void json_value_free(JSON_Value *value) {
   parson_free(value);
 }
 
-/** \brief json_value_init_object */
+/**
+ * \\brief json_value_init_object
+ * \\return Returns JSON_Value *
+ */
 JSON_Value *json_value_init_object(void) {
   JSON_Value *new_value = (JSON_Value *)parson_malloc(sizeof(JSON_Value));
   if (!new_value) {
@@ -2251,7 +3282,10 @@ JSON_Value *json_value_init_object(void) {
   return new_value;
 }
 
-/** \brief json_value_init_array */
+/**
+ * \\brief json_value_init_array
+ * \\return Returns JSON_Value *
+ */
 JSON_Value *json_value_init_array(void) {
   JSON_Value *new_value = (JSON_Value *)parson_malloc(sizeof(JSON_Value));
   if (!new_value) {
@@ -2268,7 +3302,11 @@ JSON_Value *json_value_init_array(void) {
   return new_value;
 }
 
-/** \brief json_value_init_string */
+/**
+ * \\brief json_value_init_string
+ * \\param string Parameter string
+ * \\return Returns JSON_Value *
+ */
 JSON_Value *json_value_init_string(const char *string) {
   if (string == NULL) {
     return NULL;
@@ -2276,7 +3314,12 @@ JSON_Value *json_value_init_string(const char *string) {
   return json_value_init_string_with_len(string, strlen(string));
 }
 
-/** \brief json_value_init_string_with_len */
+/**
+ * \\brief json_value_init_string_with_len
+ * \\param string Parameter string
+ * \\param length Parameter length
+ * \\return Returns JSON_Value *
+ */
 JSON_Value *json_value_init_string_with_len(const char *string, size_t length) {
   char *copy = NULL;
   JSON_Value *value;
@@ -2297,7 +3340,11 @@ JSON_Value *json_value_init_string_with_len(const char *string, size_t length) {
   return value;
 }
 
-/** \brief json_value_init_number */
+/**
+ * \\brief json_value_init_number
+ * \\param number Parameter number
+ * \\return Returns JSON_Value *
+ */
 JSON_Value *json_value_init_number(double number) {
   JSON_Value *new_value = NULL;
   if (IS_NUMBER_INVALID(number)) {
@@ -2314,7 +3361,11 @@ JSON_Value *json_value_init_number(double number) {
   return new_value;
 }
 
-/** \brief json_value_init_boolean */
+/**
+ * \\brief json_value_init_boolean
+ * \\param boolean Parameter boolean
+ * \\return Returns JSON_Value *
+ */
 JSON_Value *json_value_init_boolean(int boolean) {
   JSON_Value *new_value = (JSON_Value *)parson_malloc(sizeof(JSON_Value));
   if (!new_value) {
@@ -2327,7 +3378,10 @@ JSON_Value *json_value_init_boolean(int boolean) {
   return new_value;
 }
 
-/** \brief json_value_init_null */
+/**
+ * \\brief json_value_init_null
+ * \\return Returns JSON_Value *
+ */
 JSON_Value *json_value_init_null(void) {
   JSON_Value *new_value = (JSON_Value *)parson_malloc(sizeof(JSON_Value));
   if (!new_value) {
@@ -2339,7 +3393,11 @@ JSON_Value *json_value_init_null(void) {
   return new_value;
 }
 
-/** \brief json_value_deep_copy */
+/**
+ * \\brief json_value_deep_copy
+ * \\param value Parameter value
+ * \\return Returns JSON_Value *
+ */
 JSON_Value *json_value_deep_copy(const JSON_Value *value) {
   size_t i = 0;
   JSON_Value *return_value = NULL, *temp_value_copy = NULL, *temp_value = NULL;
@@ -2440,7 +3498,10 @@ JSON_Value *json_value_deep_copy(const JSON_Value *value) {
   }
 }
 
-/** \brief json_serialization_size */
+/**
+ * \\brief json_serialization_size
+ * \\param value Parameter value
+ */
 size_t json_serialization_size(const JSON_Value *value) {
   char
       num_buf[PARSON_NUM_BUF_SIZE]; /* recursively allocating buffer on stack is
@@ -2449,7 +3510,12 @@ size_t json_serialization_size(const JSON_Value *value) {
   return res < 0 ? 0 : (size_t)(res) + 1;
 }
 
-/** \brief json_serialize_to_buffer */
+/**
+ * \\brief json_serialize_to_buffer
+ * \\param value Parameter value
+ * \\param buf Parameter buf
+ * \\param buf_size_in_bytes Parameter buf_size_in_bytes
+ */
 JSON_Status json_serialize_to_buffer(const JSON_Value *value, char *buf,
                                      size_t buf_size_in_bytes) {
   int written = -1;
@@ -2465,7 +3531,11 @@ JSON_Status json_serialize_to_buffer(const JSON_Value *value, char *buf,
   return JSONSuccess;
 }
 
-/** \brief json_serialize_to_file */
+/**
+ * \\brief json_serialize_to_file
+ * \\param value Parameter value
+ * \\param filename Parameter filename
+ */
 JSON_Status json_serialize_to_file(const JSON_Value *value,
                                    const char *filename) {
   JSON_Status return_code = JSONSuccess;
@@ -2489,6 +3559,8 @@ JSON_Status json_serialize_to_file(const JSON_Value *value,
   return return_code;
 }
 
+/** \\brief json_serialize_to_string
+ * \\note The returned string must be freed with json_free_serialized_string(). */
 char *json_serialize_to_string(const JSON_Value *value) {
   JSON_Status serialization_result = JSONFailure;
   size_t buf_size_bytes = json_serialization_size(value);
@@ -2510,7 +3582,10 @@ char *json_serialize_to_string(const JSON_Value *value) {
   return buf;
 }
 
-/** \brief json_serialization_size_pretty */
+/**
+ * \\brief json_serialization_size_pretty
+ * \\param value Parameter value
+ */
 size_t json_serialization_size_pretty(const JSON_Value *value) {
   char
       num_buf[PARSON_NUM_BUF_SIZE]; /* recursively allocating buffer on stack is
@@ -2519,7 +3594,12 @@ size_t json_serialization_size_pretty(const JSON_Value *value) {
   return res < 0 ? 0 : (size_t)(res) + 1;
 }
 
-/** \brief json_serialize_to_buffer_pretty */
+/**
+ * \\brief json_serialize_to_buffer_pretty
+ * \\param value Parameter value
+ * \\param buf Parameter buf
+ * \\param buf_size_in_bytes Parameter buf_size_in_bytes
+ */
 JSON_Status json_serialize_to_buffer_pretty(const JSON_Value *value, char *buf,
                                             size_t buf_size_in_bytes) {
   int written = -1;
@@ -2534,7 +3614,11 @@ JSON_Status json_serialize_to_buffer_pretty(const JSON_Value *value, char *buf,
   }
   return JSONSuccess;
 }
-/** \brief json_serialize_to_file_pretty */
+/**
+ * \\brief json_serialize_to_file_pretty
+ * \\param value Parameter value
+ * \\param filename Parameter filename
+ */
 JSON_Status json_serialize_to_file_pretty(const JSON_Value *value,
                                           const char *filename) {
   JSON_Status return_code = JSONSuccess;
@@ -2558,6 +3642,8 @@ JSON_Status json_serialize_to_file_pretty(const JSON_Value *value,
   return return_code;
 }
 
+/** \\brief json_serialize_to_string_pretty
+ * \\note The returned string must be freed with json_free_serialized_string(). */
 char *json_serialize_to_string_pretty(const JSON_Value *value) {
   JSON_Status serialization_result = JSONFailure;
   size_t buf_size_bytes = json_serialization_size_pretty(value);
@@ -2580,10 +3666,17 @@ char *json_serialize_to_string_pretty(const JSON_Value *value) {
   return buf;
 }
 
-/** \brief json_free_serialized_string */
+/**
+ * \\brief json_free_serialized_string
+ * \\param string Parameter string
+ */
 void json_free_serialized_string(char *string) { parson_free(string); }
 
-/** \brief json_array_remove */
+/**
+ * \\brief json_array_remove
+ * \\param array Parameter array
+ * \\param ix Parameter ix
+ */
 JSON_Status json_array_remove(JSON_Array *array, size_t ix) {
   size_t to_move_bytes = 0;
   if (array == NULL || ix >= json_array_get_count(array)) {
@@ -2596,7 +3689,12 @@ JSON_Status json_array_remove(JSON_Array *array, size_t ix) {
   return JSONSuccess;
 }
 
-/** \brief json_array_replace_value */
+/**
+ * \\brief json_array_replace_value
+ * \\param array Parameter array
+ * \\param ix Parameter ix
+ * \\param value Parameter value
+ */
 JSON_Status json_array_replace_value(JSON_Array *array, size_t ix,
                                      JSON_Value *value) {
   if (array == NULL || value == NULL || value->parent != NULL ||
@@ -2609,7 +3707,12 @@ JSON_Status json_array_replace_value(JSON_Array *array, size_t ix,
   return JSONSuccess;
 }
 
-/** \brief json_array_replace_string */
+/**
+ * \\brief json_array_replace_string
+ * \\param array Parameter array
+ * \\param i Parameter i
+ * \\param string Parameter string
+ */
 JSON_Status json_array_replace_string(JSON_Array *array, size_t i,
                                       const char *string) {
   JSON_Value *value = json_value_init_string(string);
@@ -2623,7 +3726,13 @@ JSON_Status json_array_replace_string(JSON_Array *array, size_t i,
   return JSONSuccess;
 }
 
-/** \brief json_array_replace_string_with_len */
+/**
+ * \\brief json_array_replace_string_with_len
+ * \\param array Parameter array
+ * \\param i Parameter i
+ * \\param string Parameter string
+ * \\param len Parameter len
+ */
 JSON_Status json_array_replace_string_with_len(JSON_Array *array, size_t i,
                                                const char *string, size_t len) {
   JSON_Value *value = json_value_init_string_with_len(string, len);
@@ -2637,7 +3746,12 @@ JSON_Status json_array_replace_string_with_len(JSON_Array *array, size_t i,
   return JSONSuccess;
 }
 
-/** \brief json_array_replace_number */
+/**
+ * \\brief json_array_replace_number
+ * \\param array Parameter array
+ * \\param i Parameter i
+ * \\param number Parameter number
+ */
 JSON_Status json_array_replace_number(JSON_Array *array, size_t i,
                                       double number) {
   JSON_Value *value = json_value_init_number(number);
@@ -2651,7 +3765,12 @@ JSON_Status json_array_replace_number(JSON_Array *array, size_t i,
   return JSONSuccess;
 }
 
-/** \brief json_array_replace_boolean */
+/**
+ * \\brief json_array_replace_boolean
+ * \\param array Parameter array
+ * \\param i Parameter i
+ * \\param boolean Parameter boolean
+ */
 JSON_Status json_array_replace_boolean(JSON_Array *array, size_t i,
                                        int boolean) {
   JSON_Value *value = json_value_init_boolean(boolean);
@@ -2665,7 +3784,11 @@ JSON_Status json_array_replace_boolean(JSON_Array *array, size_t i,
   return JSONSuccess;
 }
 
-/** \brief json_array_replace_null */
+/**
+ * \\brief json_array_replace_null
+ * \\param array Parameter array
+ * \\param i Parameter i
+ */
 JSON_Status json_array_replace_null(JSON_Array *array, size_t i) {
   JSON_Value *value = json_value_init_null();
   if (value == NULL) {
@@ -2678,7 +3801,10 @@ JSON_Status json_array_replace_null(JSON_Array *array, size_t i) {
   return JSONSuccess;
 }
 
-/** \brief json_array_clear */
+/**
+ * \\brief json_array_clear
+ * \\param array Parameter array
+ */
 JSON_Status json_array_clear(JSON_Array *array) {
   size_t i = 0;
   if (array == NULL) {
@@ -2691,7 +3817,11 @@ JSON_Status json_array_clear(JSON_Array *array) {
   return JSONSuccess;
 }
 
-/** \brief json_array_append_value */
+/**
+ * \\brief json_array_append_value
+ * \\param array Parameter array
+ * \\param value Parameter value
+ */
 JSON_Status json_array_append_value(JSON_Array *array, JSON_Value *value) {
   if (array == NULL || value == NULL || value->parent != NULL) {
     return JSONFailure;
@@ -2699,7 +3829,11 @@ JSON_Status json_array_append_value(JSON_Array *array, JSON_Value *value) {
   return json_array_add(array, value);
 }
 
-/** \brief json_array_append_string */
+/**
+ * \\brief json_array_append_string
+ * \\param array Parameter array
+ * \\param string Parameter string
+ */
 JSON_Status json_array_append_string(JSON_Array *array, const char *string) {
   JSON_Value *value = json_value_init_string(string);
   if (value == NULL) {
@@ -2712,7 +3846,12 @@ JSON_Status json_array_append_string(JSON_Array *array, const char *string) {
   return JSONSuccess;
 }
 
-/** \brief json_array_append_string_with_len */
+/**
+ * \\brief json_array_append_string_with_len
+ * \\param array Parameter array
+ * \\param string Parameter string
+ * \\param len Parameter len
+ */
 JSON_Status json_array_append_string_with_len(JSON_Array *array,
                                               const char *string, size_t len) {
   JSON_Value *value = json_value_init_string_with_len(string, len);
@@ -2726,7 +3865,11 @@ JSON_Status json_array_append_string_with_len(JSON_Array *array,
   return JSONSuccess;
 }
 
-/** \brief json_array_append_number */
+/**
+ * \\brief json_array_append_number
+ * \\param array Parameter array
+ * \\param number Parameter number
+ */
 JSON_Status json_array_append_number(JSON_Array *array, double number) {
   JSON_Value *value = json_value_init_number(number);
   if (value == NULL) {
@@ -2739,7 +3882,11 @@ JSON_Status json_array_append_number(JSON_Array *array, double number) {
   return JSONSuccess;
 }
 
-/** \brief json_array_append_boolean */
+/**
+ * \\brief json_array_append_boolean
+ * \\param array Parameter array
+ * \\param boolean Parameter boolean
+ */
 JSON_Status json_array_append_boolean(JSON_Array *array, int boolean) {
   JSON_Value *value = json_value_init_boolean(boolean);
   if (value == NULL) {
@@ -2752,7 +3899,10 @@ JSON_Status json_array_append_boolean(JSON_Array *array, int boolean) {
   return JSONSuccess;
 }
 
-/** \brief json_array_append_null */
+/**
+ * \\brief json_array_append_null
+ * \\param array Parameter array
+ */
 JSON_Status json_array_append_null(JSON_Array *array) {
   JSON_Value *value = json_value_init_null();
   if (value == NULL) {
@@ -2765,7 +3915,12 @@ JSON_Status json_array_append_null(JSON_Array *array) {
   return JSONSuccess;
 }
 
-/** \brief json_object_set_value */
+/**
+ * \\brief json_object_set_value
+ * \\param object Parameter object
+ * \\param name Parameter name
+ * \\param value Parameter value
+ */
 JSON_Status json_object_set_value(JSON_Object *object, const char *name,
                                   JSON_Value *value) {
   unsigned long hash = 0;
@@ -2811,7 +3966,12 @@ JSON_Status json_object_set_value(JSON_Object *object, const char *name,
   return JSONSuccess;
 }
 
-/** \brief json_object_set_string */
+/**
+ * \\brief json_object_set_string
+ * \\param object Parameter object
+ * \\param name Parameter name
+ * \\param string Parameter string
+ */
 JSON_Status json_object_set_string(JSON_Object *object, const char *name,
                                    const char *string) {
   JSON_Value *value = json_value_init_string(string);
@@ -2822,7 +3982,13 @@ JSON_Status json_object_set_string(JSON_Object *object, const char *name,
   return status;
 }
 
-/** \brief json_object_set_string_with_len */
+/**
+ * \\brief json_object_set_string_with_len
+ * \\param object Parameter object
+ * \\param name Parameter name
+ * \\param string Parameter string
+ * \\param len Parameter len
+ */
 JSON_Status json_object_set_string_with_len(JSON_Object *object,
                                             const char *name,
                                             const char *string, size_t len) {
@@ -2834,7 +4000,12 @@ JSON_Status json_object_set_string_with_len(JSON_Object *object,
   return status;
 }
 
-/** \brief json_object_set_number */
+/**
+ * \\brief json_object_set_number
+ * \\param object Parameter object
+ * \\param name Parameter name
+ * \\param number Parameter number
+ */
 JSON_Status json_object_set_number(JSON_Object *object, const char *name,
                                    double number) {
   JSON_Value *value = json_value_init_number(number);
@@ -2845,7 +4016,12 @@ JSON_Status json_object_set_number(JSON_Object *object, const char *name,
   return status;
 }
 
-/** \brief json_object_set_boolean */
+/**
+ * \\brief json_object_set_boolean
+ * \\param object Parameter object
+ * \\param name Parameter name
+ * \\param boolean Parameter boolean
+ */
 JSON_Status json_object_set_boolean(JSON_Object *object, const char *name,
                                     int boolean) {
   JSON_Value *value = json_value_init_boolean(boolean);
@@ -2856,7 +4032,11 @@ JSON_Status json_object_set_boolean(JSON_Object *object, const char *name,
   return status;
 }
 
-/** \brief json_object_set_null */
+/**
+ * \\brief json_object_set_null
+ * \\param object Parameter object
+ * \\param name Parameter name
+ */
 JSON_Status json_object_set_null(JSON_Object *object, const char *name) {
   JSON_Value *value = json_value_init_null();
   JSON_Status status = json_object_set_value(object, name, value);
@@ -2866,7 +4046,12 @@ JSON_Status json_object_set_null(JSON_Object *object, const char *name) {
   return status;
 }
 
-/** \brief json_object_dotset_value */
+/**
+ * \\brief json_object_dotset_value
+ * \\param object Parameter object
+ * \\param name Parameter name
+ * \\param value Parameter value
+ */
 JSON_Status json_object_dotset_value(JSON_Object *object, const char *name,
                                      JSON_Value *value) {
   const char *dot_pos = NULL;
@@ -2920,7 +4105,12 @@ JSON_Status json_object_dotset_value(JSON_Object *object, const char *name,
   return JSONSuccess;
 }
 
-/** \brief json_object_dotset_string */
+/**
+ * \\brief json_object_dotset_string
+ * \\param object Parameter object
+ * \\param name Parameter name
+ * \\param string Parameter string
+ */
 JSON_Status json_object_dotset_string(JSON_Object *object, const char *name,
                                       const char *string) {
   JSON_Value *value = json_value_init_string(string);
@@ -2934,7 +4124,13 @@ JSON_Status json_object_dotset_string(JSON_Object *object, const char *name,
   return JSONSuccess;
 }
 
-/** \brief json_object_dotset_string_with_len */
+/**
+ * \\brief json_object_dotset_string_with_len
+ * \\param object Parameter object
+ * \\param name Parameter name
+ * \\param string Parameter string
+ * \\param len Parameter len
+ */
 JSON_Status json_object_dotset_string_with_len(JSON_Object *object,
                                                const char *name,
                                                const char *string, size_t len) {
@@ -2949,7 +4145,12 @@ JSON_Status json_object_dotset_string_with_len(JSON_Object *object,
   return JSONSuccess;
 }
 
-/** \brief json_object_dotset_number */
+/**
+ * \\brief json_object_dotset_number
+ * \\param object Parameter object
+ * \\param name Parameter name
+ * \\param number Parameter number
+ */
 JSON_Status json_object_dotset_number(JSON_Object *object, const char *name,
                                       double number) {
   JSON_Value *value = json_value_init_number(number);
@@ -2963,7 +4164,12 @@ JSON_Status json_object_dotset_number(JSON_Object *object, const char *name,
   return JSONSuccess;
 }
 
-/** \brief json_object_dotset_boolean */
+/**
+ * \\brief json_object_dotset_boolean
+ * \\param object Parameter object
+ * \\param name Parameter name
+ * \\param boolean Parameter boolean
+ */
 JSON_Status json_object_dotset_boolean(JSON_Object *object, const char *name,
                                        int boolean) {
   JSON_Value *value = json_value_init_boolean(boolean);
@@ -2977,7 +4183,11 @@ JSON_Status json_object_dotset_boolean(JSON_Object *object, const char *name,
   return JSONSuccess;
 }
 
-/** \brief json_object_dotset_null */
+/**
+ * \\brief json_object_dotset_null
+ * \\param object Parameter object
+ * \\param name Parameter name
+ */
 JSON_Status json_object_dotset_null(JSON_Object *object, const char *name) {
   JSON_Value *value = json_value_init_null();
   if (value == NULL) {
@@ -2990,17 +4200,28 @@ JSON_Status json_object_dotset_null(JSON_Object *object, const char *name) {
   return JSONSuccess;
 }
 
-/** \brief json_object_remove */
+/**
+ * \\brief json_object_remove
+ * \\param object Parameter object
+ * \\param name Parameter name
+ */
 JSON_Status json_object_remove(JSON_Object *object, const char *name) {
   return json_object_remove_internal(object, name, PARSON_TRUE);
 }
 
-/** \brief json_object_dotremove */
+/**
+ * \\brief json_object_dotremove
+ * \\param object Parameter object
+ * \\param name Parameter name
+ */
 JSON_Status json_object_dotremove(JSON_Object *object, const char *name) {
   return json_object_dotremove_internal(object, name, PARSON_TRUE);
 }
 
-/** \brief json_object_clear */
+/**
+ * \\brief json_object_clear
+ * \\param object Parameter object
+ */
 JSON_Status json_object_clear(JSON_Object *object) {
   size_t i = 0;
   if (object == NULL) {
@@ -3020,7 +4241,11 @@ JSON_Status json_object_clear(JSON_Object *object) {
   return JSONSuccess;
 }
 
-/** \brief json_validate */
+/**
+ * \\brief json_validate
+ * \\param schema Parameter schema
+ * \\param value Parameter value
+ */
 JSON_Status json_validate(const JSON_Value *schema, const JSON_Value *value) {
   JSON_Value *temp_schema_value = NULL, *temp_value = NULL;
   JSON_Array *schema_array = NULL, *value_array = NULL;
@@ -3087,7 +4312,11 @@ JSON_Status json_validate(const JSON_Value *schema, const JSON_Value *value) {
   }
 }
 
-/** \brief json_value_equals */
+/**
+ * \\brief json_value_equals
+ * \\param a Parameter a
+ * \\param b Parameter b
+ */
 int json_value_equals(const JSON_Value *a, const JSON_Value *b) {
   JSON_Object *a_object = NULL, *b_object = NULL;
   JSON_Array *a_array = NULL, *b_array = NULL;
@@ -3154,53 +4383,84 @@ int json_value_equals(const JSON_Value *a, const JSON_Value *b) {
   }
 }
 
-/** \brief json_type */
+/**
+ * \\brief json_type
+ * \\param value Parameter value
+ */
 JSON_Value_Type json_type(const JSON_Value *value) {
   return json_value_get_type(value);
 }
 
-/** \brief json_object */
+/**
+ * \\brief json_object
+ * \\param value Parameter value
+ * \\return Returns JSON_Object *
+ */
 JSON_Object *json_object(const JSON_Value *value) {
   return json_value_get_object(value);
 }
 
-/** \brief json_array */
+/**
+ * \\brief json_array
+ * \\param value Parameter value
+ * \\return Returns JSON_Array *
+ */
 JSON_Array *json_array(const JSON_Value *value) {
   return json_value_get_array(value);
 }
 
+/** \\brief json_string */
 const char *json_string(const JSON_Value *value) {
   return json_value_get_string(value);
 }
 
-/** \brief json_string_len */
+/**
+ * \\brief json_string_len
+ * \\param value Parameter value
+ */
 size_t json_string_len(const JSON_Value *value) {
   return json_value_get_string_len(value);
 }
 
-/** \brief json_number */
+/**
+ * \\brief json_number
+ * \\param value Parameter value
+ */
 double json_number(const JSON_Value *value) {
   return json_value_get_number(value);
 }
 
-/** \brief json_boolean */
+/**
+ * \\brief json_boolean
+ * \\param value Parameter value
+ */
 int json_boolean(const JSON_Value *value) {
   return json_value_get_boolean(value);
 }
 
-/** \brief json_set_allocation_functions */
+/**
+ * \\brief json_set_allocation_functions
+ * \\param malloc_fun Parameter malloc_fun
+ * \\param free_fun Parameter free_fun
+ */
 void json_set_allocation_functions(JSON_Malloc_Function malloc_fun,
                                    JSON_Free_Function free_fun) {
   parson_malloc = malloc_fun;
   parson_free = free_fun;
 }
 
-/** \brief json_set_escape_slashes */
+/**
+ * \\brief json_set_escape_slashes
+ * \\param escape_slashes Parameter escape_slashes
+ */
 void json_set_escape_slashes(int escape_slashes) {
   parson_escape_slashes = escape_slashes;
 }
 
-/** \brief json_set_float_serialization_format */
+/**
+ * \\brief json_set_float_serialization_format
+ * \\param format Parameter format
+ */
 void json_set_float_serialization_format(const char *format) {
   if (parson_float_format) {
     parson_free(parson_float_format);
@@ -3213,7 +4473,10 @@ void json_set_float_serialization_format(const char *format) {
   parson_float_format = parson_strdup(format);
 }
 
-/** \brief json_set_number_serialization_function */
+/**
+ * \\brief json_set_number_serialization_function
+ * \\param func Parameter func
+ */
 void json_set_number_serialization_function(
     JSON_Number_Serialization_Function func) {
   parson_number_serialization_function = func;

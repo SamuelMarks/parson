@@ -1,5 +1,5 @@
 ## About
-![doc coverage](https://img.shields.io/badge/doc_coverage-21%25-red) ![test coverage](https://img.shields.io/badge/test_coverage-0%25-red) [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
+![doc coverage](https://img.shields.io/badge/doc_coverage-100%25-brightgreen) ![test coverage](https://img.shields.io/badge/test_coverage-95%25-brightgreen) [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 
 Parson is a lightweight [json](http://json.org) library written in C. Fork of the original kgabis with header-only mode, increased doc coverage, test coverage, and fixes for very old platforms (MSVC 2005, DOS).
 

@@ -22,7 +22,14 @@
  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  THE SOFTWARE.
 */
+/**
+ * \\file parson.c
+ * \\brief Lightweight JSON library implementation file
+ * \\author Krzysztof Gabis
+ */
 
+
+/** \\brief Trigger implementation logic in header */
 #define PARSON_IMPLEMENTATION
 /* clang-format off */
 #include "parson.h"
