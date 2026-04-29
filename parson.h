@@ -53,7 +53,6 @@ extern "C" {
 /* clang-format off */
 #include <stddef.h>   /** size_t */
 
-#ifdef PARSON_IMPLEMENTATION
 #ifdef _MSC_VER
 #ifndef _CRT_SECURE_NO_WARNINGS
 /** \brief Suppress MSVC warnings */
@@ -68,7 +67,6 @@ extern "C" {
 #include <ctype.h>
 #include <math.h>
 #include <errno.h>
-#endif /* PARSON_IMPLEMENTATION */
 /* clang-format on */
 
 #if defined(_MSC_VER)
@@ -763,7 +761,14 @@ int json_boolean(const JSON_Value *value);
 static void parson_log_debug(const char *format, ...) {
   va_list args;
   va_start(args, format);
+#if defined(__APPLE__) && defined(__clang__)
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wformat-nonliteral"
+#endif
   vfprintf(stderr, format, args);
+#if defined(__APPLE__) && defined(__clang__)
+#pragma clang diagnostic pop
+#endif
   va_end(args);
 }
 #endif
@@ -1278,7 +1283,10 @@ static char *read_file(const char *filename) {
   if (!fp) {
     return NULL;
   }
-  fseek(fp, 0L, SEEK_END);
+  if (fseek(fp, 0L, SEEK_END) != 0) {
+    fclose(fp);
+    return NULL;
+  }
   pos = ftell(fp);
   if (pos < 0) {
     fclose(fp);
@@ -1395,6 +1403,7 @@ static int parson_sprintf(char *s, const char *format, ...) {
 #if defined(__APPLE__) && defined(__clang__)
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"
+#pragma clang diagnostic ignored "-Wformat-nonliteral"
 #endif
   result = vsprintf(s, format, args);
 #if defined(__APPLE__) && defined(__clang__)
@@ -1580,19 +1589,13 @@ static unsigned long hash_string(const char *string, size_t n) {
  * \\return Returns static JSON_Object *
  */
 static JSON_Object *json_object_make(JSON_Value *wrapping_value) {
-  JSON_Status res = JSONFailure;
   JSON_Object *new_obj = (JSON_Object *)parson_malloc(sizeof(JSON_Object));
   if (new_obj == NULL) {
     LOG_DEBUG("OOM\n");
     return NULL;
   }
   new_obj->wrapping_value = wrapping_value;
-  res = json_object_init(new_obj, 0);
-  if (res != JSONSuccess) {
-    parson_free(new_obj);
-
-    return NULL;
-  }
+  json_object_init(new_obj, 0);
   return new_obj;
 }
 

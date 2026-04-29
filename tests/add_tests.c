@@ -1,4 +1,4 @@
-﻿/* clang-format off */
+/* clang-format off */
 /**
  * \\file add_tests.c
  * \\brief Additional test suite for parson JSON library
@@ -9,6 +9,69 @@
 #include <stdio.h>
 #include <string.h>
 /* clang-format on */
+
+const char *get_file_path(const char *filename);
+extern int g_failing_file;
+extern int g_tests_passed;
+extern int g_tests_failed;
+#define TEST(A)                                                                \
+  do {                                                                         \
+    if (A) {                                                                   \
+      g_tests_passed++;                                                        \
+    } else {                                                                   \
+      printf("%d %-72s - FAILED\n", __LINE__, #A);                             \
+      g_tests_failed++;                                                        \
+    }                                                                          \
+  } while (0)
+
+void test_file_parsing_failures(void) {
+  JSON_Value *val;
+  
+  /* Test fseek failure */
+  g_failing_file = 2;
+  val = json_parse_file(get_file_path("test_2.txt"));
+  TEST(val == NULL);
+  val = json_parse_file_with_comments(get_file_path("test_2.txt"));
+  TEST(val == NULL);
+  
+  /* Test ftell failure */
+  g_failing_file = 1;
+  val = json_parse_file(get_file_path("test_2.txt"));
+  TEST(val == NULL);
+  val = json_parse_file_with_comments(get_file_path("test_2.txt"));
+  TEST(val == NULL);
+  
+  /* Test fread failure */
+  g_failing_file = 3;
+  val = json_parse_file(get_file_path("test_2.txt"));
+  TEST(val == NULL);
+  val = json_parse_file_with_comments(get_file_path("test_2.txt"));
+  TEST(val == NULL);
+  
+  /* Test ferror failure */
+  g_failing_file = 4;
+  val = json_parse_file(get_file_path("test_2.txt"));
+  TEST(val == NULL);
+  val = json_parse_file_with_comments(get_file_path("test_2.txt"));
+  TEST(val == NULL);
+  
+  g_failing_file = 0;
+}
+
+struct mock_json_value {
+    void *parent;
+    int type;
+};
+
+void test_json_error_coverage(void) {
+  struct mock_json_value bad_val_mock;
+  JSON_Value *bad_val = (JSON_Value *)&bad_val_mock;
+  bad_val_mock.type = JSONError;
+  bad_val_mock.parent = NULL;
+  
+  TEST(json_validate(bad_val, bad_val) == JSONFailure);
+  TEST(json_value_equals(bad_val, bad_val) == 1);
+}
 
 /**
  * \\brief test_all_apis

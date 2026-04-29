@@ -43,6 +43,8 @@
 #define PARSON_IMPLEMENTATION
 #endif
 
+#define PARSON_FORCE_HASH_COLLISIONS 1
+
 #include <stdio.h>
 /** \brief failing_ftell */
 long failing_ftell(FILE *stream);
@@ -183,9 +185,9 @@ static char *test_read_file(const char *filename);
 const char *get_file_path(const char *filename);
 
 /** \brief Counter for passed tests */
-static int g_tests_passed;
+int g_tests_passed;
 /** \brief Counter for failed tests */
-static int g_tests_failed;
+int g_tests_failed;
 
 /**
  * \\brief test_coverage_gap8
@@ -364,6 +366,8 @@ int tests_main(int argc, char *argv[]) {
   test_coverage_gap();
   test_coverage_gap8();
   test_memory_leaks();
+  test_file_parsing_failures();
+  test_json_error_coverage();
   test_failing_allocations_for_all_apis();
   test_failing_allocations();
   test_custom_number_format();

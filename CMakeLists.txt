@@ -4,7 +4,7 @@ project(parson VERSION 1.5.3 LANGUAGES C)
 option(PARSON_UNICODE "Use UNICODE charset" OFF)
 option(PARSON_LTO "Enable Link-Time Optimization (LTO)" OFF)
 option(PARSON_SINGLE_THREADED "Use Single-threaded CRT" OFF)
-option(PARSON_SINGLE_HEADER "Enable STB-style single header mode" OFF)
+option(PARSON_SINGLE_HEADER "Enable STB-style single header mode" ON)
 
 set(PARSON_MSVC_RUNTIME_CHECKS "" CACHE STRING "MSVC Runtime Checks (/RTC1, /RTCs, /RTCu)")
 
