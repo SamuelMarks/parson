@@ -1,0 +1,35 @@
+repos:
+-   repo: https://github.com/pre-commit/mirrors-clang-format
+    rev: v18.1.5
+    hooks:
+    -   id: clang-format
+        args: [--style=llvm]
+        types_or: [c, c++]
+-   repo: https://github.com/pocc/pre-commit-hooks
+    rev: v1.3.5
+    hooks:
+    -   id: cppcheck
+        args: [--suppress=style, --suppress=unreadVariable, --suppress=constVariablePointer, --suppress=variableScope, --suppress=knownConditionTrueFalse, --suppress=unusedFunction, --suppress=missingIncludeSystem, --suppress=toomanyconfigs, --suppress=unmatchedSuppression, --suppress=unusedStructMember, --suppress=invalidscanf, --suppress=duplicateExpression, --suppress=constParameter, --suppress=constParameterPointer, --suppress=constVariable]
+-   repo: local
+    hooks:
+    -   id: build
+        name: Build
+        entry: make all
+        language: system
+        pass_filenames: false
+    -   id: test
+        name: Test
+        entry: make test
+        language: system
+        pass_filenames: false
+    -   id: valgrind
+        name: Valgrind
+        entry: bash -c "if [ \"$(uname)\" = \"Linux\" ]; then make test && valgrind --leak-check=full --error-exitcode=1 ./test; fi"
+        language: system
+        pass_filenames: false
+    -   id: coverage-shields
+        name: Update Coverage Shields
+        entry: python3 scripts/update_shields.py
+        language: system
+        pass_filenames: false
+        always_run: true

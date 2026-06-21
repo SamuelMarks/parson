@@ -28,7 +28,6 @@
  * \\author Krzysztof Gabis
  */
 
-
 /** \\brief Trigger implementation logic in header */
 #define PARSON_IMPLEMENTATION
 /* clang-format off */

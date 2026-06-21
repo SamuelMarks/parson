@@ -91,6 +91,25 @@ extern int g_failing_file;
 
 /** \\brief Macro to check string equality */
 #define STREQ(A, B) ((A) && (B) ? strcmp((A), (B)) == 0 : 0)
+
+#define TEST_SERIALIZATION(val)                                                \
+  do {                                                                         \
+    char *__ser = json_serialize_to_string(val);                               \
+    JSON_Value *__par = json_parse_string(__ser);                              \
+    TEST(json_value_equals(__par, (val)));                                     \
+    json_free_serialized_string(__ser);                                        \
+    json_value_free(__par);                                                    \
+  } while (0)
+
+#define TEST_SERIALIZATION_PRETTY(val)                                         \
+  do {                                                                         \
+    char *__ser = json_serialize_to_string_pretty(val);                        \
+    JSON_Value *__par = json_parse_string(__ser);                              \
+    TEST(json_value_equals(__par, (val)));                                     \
+    json_free_serialized_string(__ser);                                        \
+    json_value_free(__par);                                                    \
+  } while (0)
+
 /** \\brief Double precision epsilon */
 #define DBL_EPSILON 2.2204460492503131e-16
 /** \\brief Check if two doubles are equal */
@@ -157,7 +176,8 @@ static int g_malloc_count = 0;
 static void *counted_malloc(size_t size);
 /** \brief counted_free */
 static /** \\brief Forward declaration for test_suite_2 */
-void counted_free(void *ptr);
+    void
+    counted_free(void *ptr);
 
 /** \brief Tracker for failing allocations */
 typedef struct failing_alloc {
@@ -176,7 +196,8 @@ static failing_alloc_t g_failing_alloc;
 static void *failing_malloc(size_t size);
 /** \brief failing_free */
 static /** \\brief Forward declaration for test_suite_2 */
-void failing_free(void *ptr);
+    void
+    failing_free(void *ptr);
 
 /** \brief test_read_file */
 /** \brief Forward declaration for test_read_file */
@@ -387,10 +408,8 @@ int tests_main(int argc, char *argv[]) {
 void test_suite_1(void) {
   JSON_Value *val;
   TEST((val = json_parse_file(get_file_path("test_1_1.txt"))) != NULL);
-  TEST(
-      json_value_equals(json_parse_string(json_serialize_to_string(val)), val));
-  TEST(json_value_equals(
-      json_parse_string(json_serialize_to_string_pretty(val)), val));
+  TEST_SERIALIZATION(val);
+  TEST_SERIALIZATION_PRETTY(val);
   if (val) {
     json_value_free(val);
   }
@@ -402,20 +421,16 @@ void test_suite_1(void) {
   }
 
   TEST((val = json_parse_file(get_file_path("test_1_3.txt"))) != NULL);
-  TEST(
-      json_value_equals(json_parse_string(json_serialize_to_string(val)), val));
-  TEST(json_value_equals(
-      json_parse_string(json_serialize_to_string_pretty(val)), val));
+  TEST_SERIALIZATION(val);
+  TEST_SERIALIZATION_PRETTY(val);
   if (val) {
     json_value_free(val);
   }
 
   TEST((val = json_parse_file_with_comments(get_file_path("test_1_1.txt"))) !=
        NULL);
-  TEST(
-      json_value_equals(json_parse_string(json_serialize_to_string(val)), val));
-  TEST(json_value_equals(
-      json_parse_string(json_serialize_to_string_pretty(val)), val));
+  TEST_SERIALIZATION(val);
+  TEST_SERIALIZATION_PRETTY(val);
   if (val) {
     json_value_free(val);
   }
@@ -428,10 +443,8 @@ void test_suite_1(void) {
 
   TEST((val = json_parse_file_with_comments(get_file_path("test_1_3.txt"))) !=
        NULL);
-  TEST(
-      json_value_equals(json_parse_string(json_serialize_to_string(val)), val));
-  TEST(json_value_equals(
-      json_parse_string(json_serialize_to_string_pretty(val)), val));
+  TEST_SERIALIZATION(val);
+  TEST_SERIALIZATION_PRETTY(val);
   if (val) {
     json_value_free(val);
   }
@@ -580,11 +593,8 @@ void test_suite_2_no_comments(void) {
   JSON_Value *root_value = NULL;
   root_value = json_parse_file(get_file_path(filename));
   test_suite_2(root_value);
-  TEST(json_value_equals(
-      root_value, json_parse_string(json_serialize_to_string(root_value))));
-  TEST(json_value_equals(
-      root_value,
-      json_parse_string(json_serialize_to_string_pretty(root_value))));
+  TEST_SERIALIZATION(root_value);
+  TEST_SERIALIZATION_PRETTY(root_value);
   json_value_free(root_value);
 }
 
@@ -596,11 +606,8 @@ void test_suite_2_with_comments(void) {
   JSON_Value *root_value = NULL;
   root_value = json_parse_file_with_comments(get_file_path(filename));
   test_suite_2(root_value);
-  TEST(json_value_equals(
-      root_value, json_parse_string(json_serialize_to_string(root_value))));
-  TEST(json_value_equals(
-      root_value,
-      json_parse_string(json_serialize_to_string_pretty(root_value))));
+  TEST_SERIALIZATION(root_value);
+  TEST_SERIALIZATION_PRETTY(root_value);
   json_value_free(root_value);
 }
 
@@ -609,21 +616,82 @@ void test_suite_2_with_comments(void) {
  */
 void test_suite_3(void) {
   /* Testing valid strings */
-  TEST(json_parse_string("{\"lorem\":\"ipsum\"}") != NULL);
-  TEST(json_parse_string("[\"lorem\"]") != NULL);
-  TEST(json_parse_string("null") != NULL);
-  TEST(json_parse_string("true") != NULL);
-  TEST(json_parse_string("false") != NULL);
-  TEST(json_parse_string("\"string\"") != NULL);
-  TEST(json_parse_string("123") != NULL);
-  TEST(json_parse_string("[\"lorem\",]") != NULL);
-  TEST(json_parse_string("{\"lorem\":\"ipsum\",}") != NULL);
+
+  {
+    JSON_Value *__tmp = json_parse_string("{\"lorem\":\"ipsum\"}");
+    TEST(__tmp != NULL);
+    json_value_free(__tmp);
+  }
+
+  {
+    JSON_Value *__tmp = json_parse_string("[\"lorem\"]");
+    TEST(__tmp != NULL);
+    json_value_free(__tmp);
+  }
+
+  {
+    JSON_Value *__tmp = json_parse_string("null");
+    TEST(__tmp != NULL);
+    json_value_free(__tmp);
+  }
+
+  {
+    JSON_Value *__tmp = json_parse_string("true");
+    TEST(__tmp != NULL);
+    json_value_free(__tmp);
+  }
+
+  {
+    JSON_Value *__tmp = json_parse_string("false");
+    TEST(__tmp != NULL);
+    json_value_free(__tmp);
+  }
+
+  {
+    JSON_Value *__tmp = json_parse_string("\"string\"");
+    TEST(__tmp != NULL);
+    json_value_free(__tmp);
+  }
+
+  {
+    JSON_Value *__tmp = json_parse_string("123");
+    TEST(__tmp != NULL);
+    json_value_free(__tmp);
+  }
+
+  {
+    JSON_Value *__tmp = json_parse_string("[\"lorem\",]");
+    TEST(__tmp != NULL);
+    json_value_free(__tmp);
+  }
+
+  {
+    JSON_Value *__tmp = json_parse_string("{\"lorem\":\"ipsum\",}");
+    TEST(__tmp != NULL);
+    json_value_free(__tmp);
+  }
 
   /* Test UTF-16 parsing */
-  TEST(STREQ(json_string(json_parse_string("\"\\u0024x\"")), "$x"));
-  TEST(STREQ(json_string(json_parse_string("\"\\u00A2x\"")), "¢x"));
-  TEST(STREQ(json_string(json_parse_string("\"\\u20ACx\"")), "€x"));
-  TEST(STREQ(json_string(json_parse_string("\"\\uD801\\uDC37x\"")), "𐐷x"));
+  {
+    JSON_Value *__tmp = json_parse_string("\"\\u0024x\"");
+    TEST(STREQ(json_string(__tmp), "$x"));
+    json_value_free(__tmp);
+  }
+  {
+    JSON_Value *__tmp = json_parse_string("\"\\u00A2x\"");
+    TEST(STREQ(json_string(__tmp), "¢x"));
+    json_value_free(__tmp);
+  }
+  {
+    JSON_Value *__tmp = json_parse_string("\"\\u20ACx\"");
+    TEST(STREQ(json_string(__tmp), "€x"));
+    json_value_free(__tmp);
+  }
+  {
+    JSON_Value *__tmp = json_parse_string("\"\\uD801\\uDC37x\"");
+    TEST(STREQ(json_string(__tmp), "𐐷x"));
+    json_value_free(__tmp);
+  }
 
   /* Testing invalid strings */
   g_malloc_count = 0;
@@ -686,6 +754,8 @@ void test_suite_4(void) {
   a_copy = json_value_deep_copy(a);
   TEST(a_copy != NULL);
   TEST(json_value_equals(a, a_copy));
+  json_value_free(a);
+  json_value_free(a_copy);
 }
 
 /**
@@ -847,15 +917,35 @@ void test_suite_5(void) {
   remove_test_val = json_parse_string("[1, 2, 3, 4, 5]");
   remove_test_arr = json_array(remove_test_val);
   json_array_remove(remove_test_arr, 2);
-  TEST(json_value_equals(remove_test_val, json_parse_string("[1, 2, 4, 5]")));
+
+  {
+    JSON_Value *__tmp = json_parse_string("[1, 2, 4, 5]");
+    TEST(json_value_equals(remove_test_val, __tmp));
+    json_value_free(__tmp);
+  }
+
   json_array_remove(remove_test_arr, 0);
-  TEST(json_value_equals(remove_test_val, json_parse_string("[2, 4, 5]")));
+
+  {
+    JSON_Value *__tmp = json_parse_string("[2, 4, 5]");
+    TEST(json_value_equals(remove_test_val, __tmp));
+    json_value_free(__tmp);
+  }
+
   json_array_remove(remove_test_arr, 2);
-  TEST(json_value_equals(remove_test_val, json_parse_string("[2, 4]")));
+
+  {
+    JSON_Value *__tmp = json_parse_string("[2, 4]");
+    TEST(json_value_equals(remove_test_val, __tmp));
+    json_value_free(__tmp);
+  }
 
   /* Testing nan and inf */
   TEST(json_object_set_number(obj, "num", 0.0 / zero) == JSONFailure);
   TEST(json_object_set_number(obj, "num", 1.0 / zero) == JSONFailure);
+  json_value_free(val_from_file);
+  json_value_free(val);
+  json_value_free(remove_test_val);
 }
 
 /**
@@ -870,11 +960,14 @@ void test_suite_6(void) {
   TEST(json_value_equals(a, b));
   json_object_set_string(json_object(a), "string", "eki");
   TEST(!json_value_equals(a, b));
+  json_value_free(a);
   a = json_value_deep_copy(b);
   TEST(json_value_equals(a, b));
   json_array_append_number(
       json_object_get_array(json_object(b), "string array"), 1337);
   TEST(!json_value_equals(a, b));
+  json_value_free(a);
+  json_value_free(b);
 }
 
 /**
@@ -895,6 +988,8 @@ void test_suite_7(void) {
   TEST(json_validate(schema, val_from_file) == JSONSuccess);
   json_object_set_string(schema_obj, "age", "");
   TEST(json_validate(schema, val_from_file) == JSONFailure);
+  json_value_free(val_from_file);
+  json_value_free(schema);
 }
 
 /**
@@ -915,6 +1010,9 @@ void test_suite_8(void) {
   serialization_size = json_serialization_size(a);
   buf = json_serialize_to_string(a);
   TEST((strlen(buf) + 1) == serialization_size);
+  json_free_serialized_string(buf);
+  json_value_free(a);
+  json_value_free(b);
 }
 
 /**
@@ -941,6 +1039,10 @@ void test_suite_9(void) {
   file_contents = test_read_file(get_file_path(filename));
 
   TEST(STREQ(file_contents, serialized));
+  free(file_contents);
+  json_free_serialized_string(serialized);
+  json_value_free(a);
+  json_value_free(b);
 }
 
 /**
@@ -980,14 +1082,19 @@ void test_suite_11(void) {
 
   serialized = json_serialize_to_string(value);
   TEST(STREQ(array_with_escaped_slashes, serialized));
+  json_free_serialized_string(serialized);
 
   json_set_escape_slashes(0);
   serialized = json_serialize_to_string(value);
   TEST(STREQ(array_with_slashes, serialized));
+  json_free_serialized_string(serialized);
 
   json_set_escape_slashes(1);
   serialized = json_serialize_to_string(value);
   TEST(STREQ(array_with_escaped_slashes, serialized));
+  json_free_serialized_string(serialized);
+
+  json_value_free(value);
 }
 
 /**
@@ -1301,7 +1408,7 @@ void serialization_example(void) {
  * \\param file_path Parameter file_path
  * \\return Returns static char *
  */
-static char * test_read_file(const char *file_path) {
+static char *test_read_file(const char *file_path) {
   FILE *fp = NULL;
   size_t size_to_read = 0;
   size_t size_read = 0;
@@ -1362,7 +1469,7 @@ const char *get_file_path(const char *filename) {
  * \\param size Parameter size
  * \\return Returns static void *
  */
-static void * counted_malloc(size_t size) {
+static void *counted_malloc(size_t size) {
   void *res = malloc(size);
   if (res != NULL) {
     g_malloc_count++;
@@ -1387,7 +1494,7 @@ static void counted_free(void *ptr) {
  * \\param size Parameter size
  * \\return Returns static void *
  */
-static void * failing_malloc(size_t size) {
+static void *failing_malloc(size_t size) {
   void *res = NULL;
   if (g_failing_alloc.should_fail &&
       g_failing_alloc.total_count >= g_failing_alloc.allocation_to_fail) {
