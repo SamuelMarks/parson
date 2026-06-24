@@ -53,7 +53,7 @@ else()
     endif()
 
     if(MSVC)
-        target_compile_options(parson PRIVATE /W4 /WX)
+        target_compile_options(parson PRIVATE /W4 /WX /Za)
         if(PARSON_MSVC_RUNTIME_CHECKS)
             target_compile_options(parson PRIVATE ${PARSON_MSVC_RUNTIME_CHECKS})
         endif()

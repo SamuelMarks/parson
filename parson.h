@@ -912,10 +912,15 @@ static void parson_log_debug(const char *format, ...) {
 /** \\brief Represents an invalid or missing index in a JSON Object */
 #define OBJECT_INVALID_IX ((size_t) - 1)
 
+/** \\brief Default malloc wrapper */
+static void *parson_default_malloc(size_t size) { return malloc(size); }
+/** \\brief Default free wrapper */
+static void parson_default_free(void *ptr) { free(ptr); }
+
 /** \\brief Global malloc function for parson */
-static JSON_Malloc_Function parson_malloc = malloc;
+static JSON_Malloc_Function parson_malloc = parson_default_malloc;
 /** \\brief Global free function for parson */
-static JSON_Free_Function parson_free = free;
+static JSON_Free_Function parson_free = parson_default_free;
 
 /** \\brief Flag to determine if slashes should be escaped during serialization
  */
