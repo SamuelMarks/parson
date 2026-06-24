@@ -39,7 +39,7 @@ else()
     if(PARSON_UNICODE)
         target_compile_definitions(parson PUBLIC UNICODE _UNICODE)
     endif()
-    
+
     set_target_properties(parson PROPERTIES PUBLIC_HEADER "parson.h")
     set_target_properties(parson PROPERTIES VERSION ${PROJECT_VERSION})
     set_target_properties(parson PROPERTIES SOVERSION ${PROJECT_VERSION})
@@ -53,9 +53,12 @@ else()
     endif()
 
     if(MSVC)
+        target_compile_options(parson PRIVATE /W4 /WX)
         if(PARSON_MSVC_RUNTIME_CHECKS)
             target_compile_options(parson PRIVATE ${PARSON_MSVC_RUNTIME_CHECKS})
         endif()
+    else()
+        target_compile_options(parson PRIVATE -Wall -Wextra -pedantic -Werror -std=c90)
     endif()
 endif()
 
@@ -64,14 +67,19 @@ if(BUILD_TESTING)
     add_executable(parson_tests tests/tests.c)
     target_compile_definitions(parson_tests PRIVATE TESTS_MAIN)
     target_link_libraries(parson_tests PRIVATE parson)
-    
+
     if(PARSON_LTO AND ipo_supported)
         set_target_properties(parson_tests PROPERTIES INTERPROCEDURAL_OPTIMIZATION TRUE)
     endif()
-    if(MSVC AND PARSON_MSVC_RUNTIME_CHECKS)
-        target_compile_options(parson_tests PRIVATE ${PARSON_MSVC_RUNTIME_CHECKS})
+    if(MSVC)
+        target_compile_options(parson_tests PRIVATE /W4 /WX)
+        if(PARSON_MSVC_RUNTIME_CHECKS)
+            target_compile_options(parson_tests PRIVATE ${PARSON_MSVC_RUNTIME_CHECKS})
+        endif()
+    else()
+        target_compile_options(parson_tests PRIVATE -Wall -Wextra -pedantic -Werror -std=c90)
     endif()
-    
+
     add_test(NAME parson_test COMMAND parson_tests)
     add_custom_command(TARGET parson_tests POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy_directory
@@ -96,5 +104,3 @@ install(
 )
 
 include(CPack)
-
-

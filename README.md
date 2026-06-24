@@ -49,32 +49,32 @@ target_link_libraries(your_target PRIVATE parson)
 
 ## Examples
 ### Parsing JSON
-Here is a function, which prints basic commit info (date, sha and author) from a github repository.  
+Here is a function, which prints basic commit info (date, sha and author) from a github repository.
 ```c
 void print_commits_info(const char *username, const char *repo) {
     JSON_Value *root_value;
     JSON_Array *commits;
     JSON_Object *commit;
     size_t i;
-    
+
     char curl_command[512];
     char cleanup_command[256];
     char output_filename[] = "commits.json";
-    
+
     /* it ain't pretty, but it's not a libcurl tutorial */
-    sprintf(curl_command, 
+    sprintf(curl_command,
         "curl -s \"https://api.github.com/repos/%s/%s/commits\" > %s",
         username, repo, output_filename);
     sprintf(cleanup_command, "rm -f %s", output_filename);
     system(curl_command);
-    
+
     /* parsing json and validating output */
     root_value = json_parse_file(output_filename);
     if (json_value_get_type(root_value) != JSONArray) {
         system(cleanup_command);
         return;
     }
-    
+
     /* getting array from root value and printing commit info */
     commits = json_value_get_array(root_value);
     printf("%-10.10s %-10.10s %s\n", "Date", "SHA", "Author");
@@ -85,14 +85,14 @@ void print_commits_info(const char *username, const char *repo) {
                json_object_get_string(commit, "sha"),
                json_object_dotget_string(commit, "commit.author.name"));
     }
-    
+
     /* cleanup code */
     json_value_free(root_value);
     system(cleanup_command);
 }
 
 ```
-Calling ```print_commits_info("torvalds", "linux");``` prints:  
+Calling ```print_commits_info("torvalds", "linux");``` prints:
 ```
 Date       SHA        Author
 2012-10-15 dd8e8c4a2c David Rientjes
@@ -128,8 +128,8 @@ void persistence_example(void) {
 ```
 
 ### Serialization
-Creating JSON values is very simple thanks to the dot notation. 
-Object hierarchy is automatically created when addressing specific fields. 
+Creating JSON values is very simple thanks to the dot notation.
+Object hierarchy is automatically created when addressing specific fields.
 In the following example I create a simple JSON value containing basic information about a person.
 ```c
 void serialization_example(void) {
@@ -172,7 +172,7 @@ Remember to follow parson's code style and write appropriate tests.
 
 ## Other projects by kgabis
 * [ape](https://github.com/kgabis/ape) - simple programming language implemented in C library
-* [kgflags](https://github.com/kgabis/kgflags) - easy to use command-line flag parsing library   
+* [kgflags](https://github.com/kgabis/kgflags) - easy to use command-line flag parsing library
 * [agnes](https://github.com/kgabis/agnes) - header-only NES emulation library
 
 ## License

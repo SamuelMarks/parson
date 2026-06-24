@@ -2,7 +2,7 @@ CC = gcc
 CFLAGS = -O0 -g -Wall -Wextra -std=c89 -pedantic-errors -DTESTS_MAIN
 
 CPPC = g++
-CPPFLAGS = -O0 -g -Wall -Wextra -DTESTS_MAIN 
+CPPFLAGS = -O0 -g -Wall -Wextra -DTESTS_MAIN
 
 all: test testcpp test_hash_collisions
 
@@ -20,4 +20,3 @@ test_hash_collisions: tests/tests.c parson.c
 	./$@
 clean:
 	rm -f test *.o
-
