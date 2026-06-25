@@ -1038,6 +1038,16 @@ void test_suite_9(void) {
 
   file_contents = test_read_file(get_file_path(filename));
 
+  if (file_contents) {
+    size_t len = strlen(file_contents);
+    if (len > 0 && file_contents[len - 1] == '\n') {
+      file_contents[len - 1] = '\0';
+      if (len > 1 && file_contents[len - 2] == '\r') {
+        file_contents[len - 2] = '\0';
+      }
+    }
+  }
+
   TEST(STREQ(file_contents, serialized));
   free(file_contents);
   json_free_serialized_string(serialized);

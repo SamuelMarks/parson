@@ -2152,13 +2152,13 @@ static JSON_Status parse_utf16(const char **unprocessed, char **processed) {
   if (cp < 0x80) {
     processed_ptr[0] = (char)cp; /* 0xxxxxxx */
   } else if (cp < 0x800) {
-    processed_ptr[0] = ((cp >> 6) & 0x1F) | 0xC0; /* 110xxxxx */
-    processed_ptr[1] = ((cp) & 0x3F) | 0x80;      /* 10xxxxxx */
+    processed_ptr[0] = (char)(((cp >> 6) & 0x1F) | 0xC0); /* 110xxxxx */
+    processed_ptr[1] = (char)(((cp) & 0x3F) | 0x80);      /* 10xxxxxx */
     processed_ptr += 1;
   } else if (cp < 0xD800 || cp > 0xDFFF) {
-    processed_ptr[0] = ((cp >> 12) & 0x0F) | 0xE0; /* 1110xxxx */
-    processed_ptr[1] = ((cp >> 6) & 0x3F) | 0x80;  /* 10xxxxxx */
-    processed_ptr[2] = ((cp) & 0x3F) | 0x80;       /* 10xxxxxx */
+    processed_ptr[0] = (char)(((cp >> 12) & 0x0F) | 0xE0); /* 1110xxxx */
+    processed_ptr[1] = (char)(((cp >> 6) & 0x3F) | 0x80);  /* 10xxxxxx */
+    processed_ptr[2] = (char)(((cp) & 0x3F) | 0x80);       /* 10xxxxxx */
     processed_ptr += 2;
   } else if (cp >= 0xD800 &&
              cp <= 0xDBFF) { /* lead surrogate (0xD800..0xDBFF) */
@@ -2175,10 +2175,10 @@ static JSON_Status parse_utf16(const char **unprocessed, char **processed) {
     }
     cp = ((((lead - 0xD800) & 0x3FF) << 10) | ((trail - 0xDC00) & 0x3FF)) +
          0x010000;
-    processed_ptr[0] = (((cp >> 18) & 0x07) | 0xF0); /* 11110xxx */
-    processed_ptr[1] = (((cp >> 12) & 0x3F) | 0x80); /* 10xxxxxx */
-    processed_ptr[2] = (((cp >> 6) & 0x3F) | 0x80);  /* 10xxxxxx */
-    processed_ptr[3] = (((cp) & 0x3F) | 0x80);       /* 10xxxxxx */
+    processed_ptr[0] = (char)((((cp >> 18) & 0x07) | 0xF0)); /* 11110xxx */
+    processed_ptr[1] = (char)((((cp >> 12) & 0x3F) | 0x80)); /* 10xxxxxx */
+    processed_ptr[2] = (char)((((cp >> 6) & 0x3F) | 0x80));  /* 10xxxxxx */
+    processed_ptr[3] = (char)((((cp) & 0x3F) | 0x80));       /* 10xxxxxx */
     processed_ptr += 3;
   } else { /* trail surrogate before lead surrogate */
     return JSONFailure;
@@ -2558,7 +2558,7 @@ static JSON_Value *parse_null_value(const char **string) {
       buf += written;                                                          \
     }                                                                          \
     written_total += written;                                                  \
-  } while (0)
+  } while (0, 0)
 
 /** \brief Macro to append indentation */
 #define APPEND_INDENT(level)                                                   \
@@ -2567,7 +2567,7 @@ static JSON_Value *parse_null_value(const char **string) {
     for (level_i = 0; level_i < (level); level_i++) {                          \
       APPEND_STRING(PARSON_INDENT_STR);                                        \
     }                                                                          \
-  } while (0)
+  } while (0, 0)
 
 /**
  * \\brief json_serialize_to_buffer_r
