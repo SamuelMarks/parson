@@ -2558,7 +2558,7 @@ static JSON_Value *parse_null_value(const char **string) {
       buf += written;                                                          \
     }                                                                          \
     written_total += written;                                                  \
-  } while (0, 0)
+  } while ((void)0, 0)
 
 /** \brief Macro to append indentation */
 #define APPEND_INDENT(level)                                                   \
@@ -2567,7 +2567,7 @@ static JSON_Value *parse_null_value(const char **string) {
     for (level_i = 0; level_i < (level); level_i++) {                          \
       APPEND_STRING(PARSON_INDENT_STR);                                        \
     }                                                                          \
-  } while (0, 0)
+  } while ((void)0, 0)
 
 /**
  * \\brief json_serialize_to_buffer_r
