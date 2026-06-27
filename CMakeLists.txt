@@ -62,8 +62,8 @@ else()
     endif()
 endif()
 
-if(BUILD_TESTING)
-    enable_testing()
+if(BUILD_TESTING AND CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME)
+    include(CTest)
     add_executable(parson_tests tests/tests.c)
     target_compile_definitions(parson_tests PRIVATE TESTS_MAIN PARSON_SINGLE_HEADER)
 

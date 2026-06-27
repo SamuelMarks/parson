@@ -66,6 +66,7 @@ extern int g_failing_file;
 /** \\brief Override fread */
 #define fread failing_fread
 /** \\brief Override ferror */
+#undef ferror
 #define ferror failing_ferror
 
 #include "../parson.h"
