@@ -901,7 +901,7 @@ static void parson_log_debug(const char *format, ...) {
 #undef malloc
 #undef free
 
-#if defined(isnan) && defined(isinf)
+#if defined(isnan) && defined(isinf) && !defined(__EMSCRIPTEN__)
 /** \brief Check if number is NaN or Inf */
 #define IS_NUMBER_INVALID(x) (isnan((x)) || isinf((x)))
 #else
