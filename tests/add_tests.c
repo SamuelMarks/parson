@@ -14,6 +14,7 @@ const char *get_file_path(const char *filename);
 extern int g_failing_file;
 extern int g_tests_passed;
 extern int g_tests_failed;
+extern int g_parson_test_zero;
 #define TEST(A)                                                                \
   do {                                                                         \
     if (A) {                                                                   \
@@ -22,7 +23,7 @@ extern int g_tests_failed;
       printf("%d %-72s - FAILED\n", __LINE__, #A);                             \
       g_tests_failed++;                                                        \
     }                                                                          \
-  } while (0)
+  } while (g_parson_test_zero)
 
 void test_file_parsing_failures(void) {
   JSON_Value *val;

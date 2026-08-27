@@ -80,6 +80,7 @@ extern int g_failing_file;
 /* clang-format on */
 
 /** \\brief Test assertion macro */
+extern int g_parson_test_zero;
 #define TEST(A)                                                                \
   do {                                                                         \
     if (A) {                                                                   \
@@ -88,7 +89,7 @@ extern int g_failing_file;
       printf("%d %-72s - FAILED\n", __LINE__, #A);                             \
       g_tests_failed++;                                                        \
     }                                                                          \
-  } while (0)
+  } while (g_parson_test_zero)
 
 /** \\brief Macro to check string equality */
 #define STREQ(A, B) ((A) && (B) ? strcmp((A), (B)) == 0 : 0)
@@ -100,7 +101,7 @@ extern int g_failing_file;
     TEST(json_value_equals(__par, (val)));                                     \
     json_free_serialized_string(__ser);                                        \
     json_value_free(__par);                                                    \
-  } while (0)
+  } while (g_parson_test_zero)
 
 #define TEST_SERIALIZATION_PRETTY(val)                                         \
   do {                                                                         \
@@ -109,7 +110,7 @@ extern int g_failing_file;
     TEST(json_value_equals(__par, (val)));                                     \
     json_free_serialized_string(__ser);                                        \
     json_value_free(__par);                                                    \
-  } while (0)
+  } while (g_parson_test_zero)
 
 /** \\brief Double precision epsilon */
 #define DBL_EPSILON 2.2204460492503131e-16
@@ -202,7 +203,7 @@ static /** \\brief Forward declaration for test_suite_2 */
 
 /** \brief test_read_file */
 /** \brief Forward declaration for test_read_file */
-static char *test_read_file(const char *filename);
+static JSON_Status test_read_file(const char *filename, char **out_contents);
 /** \\brief Forward declaration for get_file_path */
 const char *get_file_path(const char *filename);
 
@@ -210,6 +211,8 @@ const char *get_file_path(const char *filename);
 int g_tests_passed;
 /** \brief Counter for failed tests */
 int g_tests_failed;
+/** \brief Dummy variable to bypass C4127 */
+int g_parson_test_zero = 0;
 
 /**
  * \\brief test_coverage_gap8
@@ -1037,7 +1040,9 @@ void test_suite_9(void) {
   serialized = json_serialize_to_string_pretty(a);
   TEST((strlen(serialized) + 1) == serialization_size);
 
-  file_contents = test_read_file(get_file_path(filename));
+  if (test_read_file(get_file_path(filename), &file_contents) != JSONSuccess) {
+    file_contents = NULL;
+  }
 
   if (file_contents) {
     size_t len = strlen(file_contents);
@@ -1133,7 +1138,7 @@ void test_failing_allocations_for_all_apis(void) {
   json_set_allocation_functions(failing_malloc, failing_free);
   printf("Testing failing allocations for all APIs: ");
 
-  while (1) {
+  for (;;) {
     g_failing_alloc.allocation_to_fail = n;
     g_failing_alloc.alloc_count = 0;
     g_failing_alloc.total_count = 0;
@@ -1176,7 +1181,7 @@ void test_failing_allocations(void) {
 
   printf("Testing failing allocations: ");
 
-  while (1) {
+  for (;;) {
     /*        printf("Failing at allocation %d\n", n); */
     g_failing_alloc.allocation_to_fail = n;
     g_failing_alloc.alloc_count = 0;
@@ -1417,9 +1422,9 @@ void serialization_example(void) {
 /**
  * \\brief test_read_file
  * \\param file_path Parameter file_path
- * \\return Returns static char *
+ * \\return Returns JSON_Status
  */
-static char *test_read_file(const char *file_path) {
+static JSON_Status test_read_file(const char *file_path, char **out_contents) {
   FILE *fp = NULL;
   size_t size_to_read = 0;
   size_t size_read = 0;
@@ -1434,14 +1439,14 @@ static char *test_read_file(const char *file_path) {
 #endif
   if (!fp) {
     assert(0);
-    return NULL;
+    return JSONFailure;
   }
   fseek(fp, 0L, SEEK_END);
   pos = ftell(fp);
   if (pos < 0) {
     fclose(fp);
     assert(0);
-    return NULL;
+    return JSONFailure;
   }
   size_to_read = pos;
   rewind(fp);
@@ -1449,18 +1454,19 @@ static char *test_read_file(const char *file_path) {
   if (!file_contents) {
     fclose(fp);
     assert(0);
-    return NULL;
+    return JSONFailure;
   }
   size_read = fread(file_contents, 1, size_to_read, fp);
   if (size_read == 0 || ferror(fp)) {
     fclose(fp);
     free(file_contents);
     assert(0);
-    return NULL;
+    return JSONFailure;
   }
   fclose(fp);
   file_contents[size_read] = '\0';
-  return file_contents;
+  *out_contents = file_contents;
+  return JSONSuccess;
 }
 
 /** \\brief get_file_path test */

@@ -1020,7 +1020,7 @@ struct json_array_t {
  * \\param filename Parameter filename
  * \\return Returns static char *
  */
-static char *read_file(const char *filename);
+static JSON_Status read_file(const char *filename, char **out_contents);
 /**
  * \\brief remove_comments
  * \\param string Parameter string
@@ -1265,9 +1265,12 @@ static char *process_string(const char *input, size_t input_len,
  * \\brief get_quoted_string
  * \\param string Parameter string
  * \\param output_string_len Parameter output_string_len
- * \\return Returns static char *
+ * \\param out_string Output string
+ * \\return Returns static JSON_Status
  */
-static char *get_quoted_string(const char **string, size_t *output_string_len);
+static JSON_Status get_quoted_string(const char **string,
+                                     size_t *output_string_len,
+                                     char **out_string);
 /**
  * \\brief parse_object_value
  * \\param string Parameter string
@@ -1342,24 +1345,24 @@ static int json_serialize_string(const char *string, size_t len, char *buf);
  * \\param filename Parameter filename
  * \\return Returns static char *
  */
-static char *read_file(const char *filename) {
+static JSON_Status read_file(const char *filename, char **out_contents) {
   FILE *fp = parson_fopen(filename, "r");
   size_t size_to_read = 0;
   size_t size_read = 0;
   long pos;
   char *file_contents;
   if (!fp) {
-    return NULL;
+    return JSONFailure;
   }
   if (fseek(fp, 0L, SEEK_END) != 0) {
     fclose(fp);
-    return NULL;
+    return JSONFailure;
   }
   pos = ftell(fp);
   if (pos < 0) {
     fclose(fp);
 
-    return NULL;
+    return JSONFailure;
   }
   size_to_read = pos;
   rewind(fp);
@@ -1367,7 +1370,7 @@ static char *read_file(const char *filename) {
   if (!file_contents) {
     fclose(fp);
     LOG_DEBUG("OOM\n");
-    return NULL;
+    return JSONFailure;
   }
   size_read = fread(file_contents, 1, size_to_read, fp);
   if (size_read == 0 || ferror(fp)) {
@@ -1375,11 +1378,12 @@ static char *read_file(const char *filename) {
 
     parson_free(file_contents);
 
-    return NULL;
+    return JSONFailure;
   }
   fclose(fp);
   file_contents[size_read] = '\0';
-  return file_contents;
+  *out_contents = file_contents;
+  return JSONSuccess;
 }
 
 /**
@@ -2279,17 +2283,22 @@ error:
  * \\brief get_quoted_string
  * \\param string Parameter string
  * \\param output_string_len Parameter output_string_len
- * \\return Returns static char *
+ * \\param out_string Output string
+ * \\return Returns static JSON_Status
  */
-static char *get_quoted_string(const char **string, size_t *output_string_len) {
+static JSON_Status get_quoted_string(const char **string,
+                                     size_t *output_string_len,
+                                     char **out_string) {
   const char *string_start = *string;
   size_t input_string_len = 0;
   JSON_Status status = skip_quotes(string);
   if (status != JSONSuccess) {
-    return NULL;
+    return JSONFailure;
   }
   input_string_len = *string - string_start - 2; /* length without quotes */
-  return process_string(string_start + 1, input_string_len, output_string_len);
+  *out_string =
+      process_string(string_start + 1, input_string_len, output_string_len);
+  return *out_string ? JSONSuccess : JSONFailure;
 }
 
 /**
@@ -2362,7 +2371,9 @@ static JSON_Value *parse_object_value(const char **string, size_t nesting) {
   }
   while (**string != '\0') {
     size_t key_len = 0;
-    new_key = get_quoted_string(string, &key_len);
+    if (get_quoted_string(string, &key_len, &new_key) != JSONSuccess) {
+      new_key = NULL;
+    }
     /* We do not support key names with embedded \0 chars */
     if (!new_key) {
       json_value_free(output_value);
@@ -2477,8 +2488,8 @@ static JSON_Value *parse_array_value(const char **string, size_t nesting) {
 static JSON_Value *parse_string_value(const char **string) {
   JSON_Value *value = NULL;
   size_t new_string_len = 0;
-  char *new_string = get_quoted_string(string, &new_string_len);
-  if (new_string == NULL) {
+  char *new_string = NULL;
+  if (get_quoted_string(string, &new_string_len, &new_string) != JSONSuccess) {
     return NULL;
   }
   value = json_value_init_string_no_copy(new_string, new_string_len);
@@ -2875,9 +2886,10 @@ static int json_serialize_string(const char *string, size_t len, char *buf) {
 /** \\brief json_parse_file
  * \\note The returned JSON_Value must be freed with json_value_free(). */
 PARSON_API JSON_Value *json_parse_file(const char *filename) {
-  char *file_contents = read_file(filename);
+  char *file_contents = NULL;
+  JSON_Status status = read_file(filename, &file_contents);
   JSON_Value *output_value = NULL;
-  if (file_contents == NULL) {
+  if (status != JSONSuccess || file_contents == NULL) {
     return NULL;
   }
   output_value = json_parse_string(file_contents);
@@ -2891,9 +2903,10 @@ PARSON_API JSON_Value *json_parse_file(const char *filename) {
  * \\return Returns JSON_Value *
  */
 PARSON_API JSON_Value *json_parse_file_with_comments(const char *filename) {
-  char *file_contents = read_file(filename);
+  char *file_contents = NULL;
+  JSON_Status status = read_file(filename, &file_contents);
   JSON_Value *output_value = NULL;
-  if (file_contents == NULL) {
+  if (status != JSONSuccess || file_contents == NULL) {
     return NULL;
   }
   output_value = json_parse_string_with_comments(file_contents);
