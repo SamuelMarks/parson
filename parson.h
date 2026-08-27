@@ -52,12 +52,7 @@ extern "C" {
 /* clang-format off */
 #include <stddef.h>   /** size_t */
 
-#ifdef _MSC_VER
-#ifndef _CRT_SECURE_NO_WARNINGS
-/** \brief Suppress MSVC warnings */
-#define _CRT_SECURE_NO_WARNINGS
-#endif /* _CRT_SECURE_NO_WARNINGS */
-#endif /* _MSC_VER */
+
 
 #include <stdarg.h>
 #include <stdio.h>
@@ -820,17 +815,14 @@ PARSON_API int json_boolean(const JSON_Value *value);
  * \\param format Parameter format
  * \\return Returns static void
  */
-static void parson_log_debug(const char *format, ...) {
+#if defined(__GNUC__) || defined(__clang__)
+__attribute__((format(printf, 1, 2)))
+#endif
+static void
+parson_log_debug(const char *format, ...) {
   va_list args;
   va_start(args, format);
-#if defined(__APPLE__) && defined(__clang__)
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wformat-nonliteral"
-#endif
   vfprintf(stderr, format, args);
-#if defined(__APPLE__) && defined(__clang__)
-#pragma clang diagnostic pop
-#endif
   va_end(args);
 }
 #endif
@@ -1049,7 +1041,11 @@ static char *parson_strdup(const char *string);
  * \\param format Parameter format
  * \\return Returns static int
  */
-static int parson_sprintf(char *s, const char *format, ...);
+#if defined(__GNUC__) || defined(__clang__)
+__attribute__((format(printf, 2, 3)))
+#endif
+static int
+parson_sprintf(char *s, const char *format, ...);
 
 /**
  * \\brief parson_fopen
@@ -1472,15 +1468,7 @@ static int parson_sprintf(char *s, const char *format, ...) {
 #if defined(_MSC_VER)
   result = vsprintf_s(s, PARSON_NUM_BUF_SIZE, format, args);
 #else
-#if defined(__APPLE__) && defined(__clang__)
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wdeprecated-declarations"
-#pragma clang diagnostic ignored "-Wformat-nonliteral"
-#endif
   result = vsprintf(s, format, args);
-#if defined(__APPLE__) && defined(__clang__)
-#pragma clang diagnostic pop
-#endif
 #endif
 
   va_end(args);

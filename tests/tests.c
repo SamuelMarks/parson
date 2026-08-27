@@ -28,15 +28,6 @@
  * \\author Krzysztof Gabis
  */
 
-#ifdef _MSC_VER
-/** \\brief Suppress MSVC warnings */
-#define _CRT_SECURE_NO_WARNINGS
-#endif
-
-#if defined(__APPLE__) && defined(__clang__)
-#pragma clang diagnostic ignored "-Wdeprecated-declarations"
-#endif
-
 /* clang-format off */
 #ifdef PARSON_SINGLE_HEADER
 /** \\brief Implement parson inside single header */
