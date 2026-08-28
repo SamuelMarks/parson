@@ -1057,7 +1057,7 @@ static FILE *parson_fopen(const char *filename, const char *mode) {
 #if defined(_MSC_VER)
   FILE *fp = NULL;
   if (fopen_s(&fp, filename, mode) != 0) {
-    return NULL;
+    fp = NULL;
   }
   return fp;
 #else

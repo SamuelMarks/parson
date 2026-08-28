@@ -81,6 +81,10 @@ if(BUILD_TESTING AND CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME)
         target_compile_options(parson_tests PRIVATE -Wall -Wextra -pedantic -Werror -std=c90)
     endif()
 
+    if(EMSCRIPTEN)
+        target_link_options(parson_tests PRIVATE "-sNODERAWFS=1" "-sSTACK_SIZE=5MB")
+    endif()
+
     add_test(NAME parson_test COMMAND parson_tests)
     add_custom_command(TARGET parson_tests POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy_directory

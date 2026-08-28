@@ -5,6 +5,7 @@
  * \\author Krzysztof Gabis
  */
 
+/* clang-format off */
 #include "../parson.h"
 #include <stdio.h>
 #include <string.h>
