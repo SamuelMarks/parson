@@ -12,3 +12,4 @@ jobs:
     with:
       build_type: 'Debug'
       cmake_configure_flags: '-DBUILD_TESTING=ON'
+      msdos_testing: true

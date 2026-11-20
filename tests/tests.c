@@ -97,6 +97,12 @@ static int failing_fclose(FILE *stream);
 
 #include "../parson.h"
 #include "greatest.h"
+#ifdef __WATCOMC__
+#include <float.h>
+#endif
+#if defined(__DOS__) || defined(MSDOS) || defined(_MSDOS) || defined(__MSDOS__)
+#include "dos_fixtures.h"
+#endif
 /* clang-format on */
 
 /** @brief Macro to check string equality safely with NULL guards */
@@ -141,6 +147,10 @@ static failing_alloc_t g_failing_alloc;
  * @return Pointer to static NUL-terminated path buffer
  */
 static const char *get_file_path(const char *filename) {
+#if defined(__DOS__) || defined(MSDOS) || defined(_MSDOS) || defined(__MSDOS__)
+  (void)g_tests_path;
+  return dos_map_fixture_path(filename);
+#else
   static char path_buf[2048];
   memset(path_buf, 0, sizeof(path_buf));
 #if defined(_MSC_VER)
@@ -152,6 +162,7 @@ static const char *get_file_path(const char *filename) {
   sprintf(path_buf, "%s/%s", g_tests_path, filename);
 #endif
   return path_buf;
+#endif
 }
 
 /**
@@ -832,10 +843,9 @@ TEST test_suite_5(void) {
   ASSERT(json_value_equals(remove_test_val, tmp));
   json_value_free(tmp);
 
+  ASSERT_EQ(JSONFailure, json_object_set_number(obj, "num", parson_test_nan()));
   ASSERT_EQ(JSONFailure,
-            json_object_set_number(obj, "num", 0.0 / g_parson_zero));
-  ASSERT_EQ(JSONFailure,
-            json_object_set_number(obj, "num", 1.0 / g_parson_zero));
+            json_object_set_number(obj, "num", parson_test_pos_inf()));
 
   json_value_free(val_from_file);
   json_value_free(val);
@@ -1390,12 +1400,23 @@ int main(int argc, char *argv[]) {
 int tests_main(int argc, char *argv[]);
 int tests_main(int argc, char *argv[]) {
 #endif
+#ifdef __WATCOMC__
+  _control87(_CW_DEFAULT, _MCW_EM | _MCW_PC | _MCW_RC | _MCW_IC);
+#endif
   if (argc == 2 && argv[1][0] != '-') {
     g_tests_path = argv[1];
     argc = 1;
   }
+#if defined(__DOS__) || defined(MSDOS) || defined(_MSDOS) || defined(__MSDOS__)
+  if (dos_fixtures_setup() != 0) {
+    return 1;
+  }
+#endif
   json_set_allocation_functions(counted_malloc, counted_free);
   GREATEST_MAIN_BEGIN();
   RUN_SUITE(parson_suite);
+#if defined(__DOS__) || defined(MSDOS) || defined(_MSDOS) || defined(__MSDOS__)
+  dos_fixtures_cleanup();
+#endif
   GREATEST_MAIN_END();
 }

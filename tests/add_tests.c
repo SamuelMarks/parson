@@ -37,8 +37,76 @@
 /* clang-format on */
 #endif
 
+#if defined(__WATCOMC__)
+/**
+ * @brief Construct quiet IEEE-754 NaN without triggering x87/emulator traps
+ * @return Quiet NaN double
+ */
+static double parson_test_nan(void) {
+  union {
+    double d;
+    unsigned short w[4];
+  } u;
+  u.w[0] = 0u;
+  u.w[1] = 0u;
+  u.w[2] = 0u;
+  u.w[3] = 0x7FF8u;
+  return u.d;
+}
+
+/**
+ * @brief Construct positive IEEE-754 Infinity without triggering x87 traps
+ * @return +Infinity double
+ */
+static double parson_test_pos_inf(void) {
+  union {
+    double d;
+    unsigned short w[4];
+  } u;
+  u.w[0] = 0u;
+  u.w[1] = 0u;
+  u.w[2] = 0u;
+  u.w[3] = 0x7FF0u;
+  return u.d;
+}
+
+/**
+ * @brief Construct negative IEEE-754 Infinity without triggering x87 traps
+ * @return -Infinity double
+ */
+static double parson_test_neg_inf(void) {
+  union {
+    double d;
+    unsigned short w[4];
+  } u;
+  u.w[0] = 0u;
+  u.w[1] = 0u;
+  u.w[2] = 0u;
+  u.w[3] = 0xFFF0u;
+  return u.d;
+}
+#else
 /** @brief Zero divisor used to construct IEEE-754 NaN and Infinity in C89 */
 static volatile double g_parson_zero = 0.0;
+
+/**
+ * @brief Construct IEEE-754 NaN in C89 via runtime 0.0 / 0.0
+ * @return NaN double
+ */
+static double parson_test_nan(void) { return 0.0 / g_parson_zero; }
+
+/**
+ * @brief Construct positive IEEE-754 Infinity in C89 via runtime 1.0 / 0.0
+ * @return +Infinity double
+ */
+static double parson_test_pos_inf(void) { return 1.0 / g_parson_zero; }
+
+/**
+ * @brief Construct negative IEEE-754 Infinity in C89 via runtime -1.0 / 0.0
+ * @return -Infinity double
+ */
+static double parson_test_neg_inf(void) { return -1.0 / g_parson_zero; }
+#endif
 
 /** @brief State counter for stateful number serialization failure test */
 static int g_stateful_num_ser_calls = 0;
@@ -79,9 +147,9 @@ static int always_failing_num_serializer(double num, char *buf) {
  * @return greatest_test_res
  */
 TEST test_c89_nan_inf(void) {
-  double nan_val = 0.0 / g_parson_zero;
-  double pos_inf = 1.0 / g_parson_zero;
-  double neg_inf = -1.0 / g_parson_zero;
+  double nan_val = parson_test_nan();
+  double pos_inf = parson_test_pos_inf();
+  double neg_inf = parson_test_neg_inf();
   JSON_Value *obj_val = json_value_init_object();
   JSON_Object *obj = json_value_get_object(obj_val);
   JSON_Value *arr_val = json_value_init_array();
@@ -371,7 +439,8 @@ TEST test_json_error_coverage(void) {
     k2_buf[1] = '2';
     k2_buf[2] = '\0';
 
-    /* Hexadecimal number rejection in is_decimal */
+    /* Hexadecimal and lone-minus number rejection in is_decimal */
+    ASSERT_EQ(JSONFailure, is_decimal("-", 1));
     ASSERT_EQ(JSONFailure, is_decimal("1x2", 3));
     ASSERT_EQ(JSONFailure, is_decimal("0.X2", 4));
     ASSERT_EQ(JSONFailure, parse_utf16_hex("", &hex_out));
@@ -621,8 +690,13 @@ static void exercise_all_apis(void) {
 
   /* Serialize to file failures & successes */
   val = json_value_init_object();
+#if defined(__DOS__) || defined(MSDOS) || defined(_MSDOS) || defined(__MSDOS__)
+  json_serialize_to_file(val, "Z:noexist.jsn");
+  json_serialize_to_file_pretty(val, "Z:noexist.jsn");
+#else
   json_serialize_to_file(val, "nonexistent_dir/file.json");
   json_serialize_to_file_pretty(val, "nonexistent_dir/file.json");
+#endif
   tmp_ok = get_file_path("tmp_all_apis_ok.json");
   if (json_serialize_to_file(val, tmp_ok) == JSONSuccess) {
     remove(tmp_ok);
@@ -651,8 +725,14 @@ static void exercise_all_apis(void) {
   json_array_remove(arr, 0);
   json_value_free(arr_val);
 
+#if defined(__DOS__) || defined(MSDOS) || defined(_MSDOS) || defined(__MSDOS__)
+  remove("noexist.jsn");
+  json_value_free(json_parse_file("noexist.jsn"));
+  json_value_free(json_parse_file_with_comments("noexist.jsn"));
+#else
   json_value_free(json_parse_file("nonexistent.json"));
   json_value_free(json_parse_file_with_comments("nonexistent.json"));
+#endif
 }
 
 /**

@@ -1137,8 +1137,18 @@ static void parson_log_debug(const char *format, ...) {
 
 /** \brief Initial capacity for JSON arrays and objects */
 #define STARTING_CAPACITY 16
+#ifndef MAX_NESTING
+#if defined(__DOS__) || defined(MSDOS) || defined(_MSDOS) ||                   \
+    defined(__MSDOS__) || defined(__I86__) || defined(M_I86) ||                \
+    defined(_M_I86)
+/** \brief Maximum allowed nesting depth for parsed JSON on DOS/16-bit targets
+ */
+#define MAX_NESTING 64
+#else
 /** \brief Maximum allowed nesting depth for parsed JSON */
 #define MAX_NESTING 2048
+#endif
+#endif
 
 #ifndef PARSON_DEFAULT_FLOAT_FORMAT
 /** \brief Default float format */
@@ -1173,7 +1183,23 @@ static void parson_log_debug(const char *format, ...) {
 #undef malloc
 #undef free
 
-#if defined(__STDC_VERSION__) && __STDC_VERSION__ >= 199901L &&                \
+#if defined(__WATCOMC__)
+/**
+ * \brief Check if IEEE-754 little-endian double is NaN or Inf on OpenWatcom
+ * \param x Double value to inspect
+ * \return Non-zero when exponent bits are all 1s (NaN or +/-Inf), 0 otherwise
+ */
+static int parson_is_number_invalid(double x) {
+  union {
+    double d;
+    unsigned short w[4];
+  } u;
+  u.d = x;
+  return (u.w[3] & 0x7FF0u) == 0x7FF0u;
+}
+/** \brief Check if number is NaN or Inf on OpenWatcom */
+#define IS_NUMBER_INVALID(x) parson_is_number_invalid((x))
+#elif defined(__STDC_VERSION__) && __STDC_VERSION__ >= 199901L &&              \
     defined(isnan) && defined(isinf) && !defined(__EMSCRIPTEN__)
 /** \brief Check if number is NaN or Inf */
 #define IS_NUMBER_INVALID(x) (isnan((x)) || isinf((x)))
@@ -2003,41 +2029,41 @@ static int num_bytes_in_utf8_sequence(unsigned char c) {
 
 static enum json_result_t verify_utf8_sequence(const unsigned char *string,
                                                int *len) {
-  unsigned int cp = 0;
+  unsigned long cp = 0;
   *len = num_bytes_in_utf8_sequence(string[0]);
 
   if (*len == 1) {
     cp = string[0];
   } else if (*len == 2 && IS_CONT(string[1])) {
-    cp = (unsigned int)(string[0] & 0x1F);
-    cp = (cp << 6) | (unsigned int)(string[1] & 0x3F);
+    cp = (unsigned long)(string[0] & 0x1F);
+    cp = (cp << 6) | (unsigned long)(string[1] & 0x3F);
   } else if (*len == 3 && IS_CONT(string[1]) && IS_CONT(string[2])) {
-    cp = (unsigned int)(string[0] & 0xF);
-    cp = (cp << 6) | (unsigned int)(string[1] & 0x3F);
-    cp = (cp << 6) | (unsigned int)(string[2] & 0x3F);
+    cp = (unsigned long)(string[0] & 0xF);
+    cp = (cp << 6) | (unsigned long)(string[1] & 0x3F);
+    cp = (cp << 6) | (unsigned long)(string[2] & 0x3F);
   } else if (*len == 4 && IS_CONT(string[1]) && IS_CONT(string[2]) &&
              IS_CONT(string[3])) {
-    cp = (unsigned int)(string[0] & 0x7);
-    cp = (cp << 6) | (unsigned int)(string[1] & 0x3F);
-    cp = (cp << 6) | (unsigned int)(string[2] & 0x3F);
-    cp = (cp << 6) | (unsigned int)(string[3] & 0x3F);
+    cp = (unsigned long)(string[0] & 0x7);
+    cp = (cp << 6) | (unsigned long)(string[1] & 0x3F);
+    cp = (cp << 6) | (unsigned long)(string[2] & 0x3F);
+    cp = (cp << 6) | (unsigned long)(string[3] & 0x3F);
   } else {
     return JSONFailure;
   }
 
   /* overlong encodings */
-  if ((cp < 0x80 && *len > 1) || (cp < 0x800 && *len > 2) ||
-      (cp < 0x10000 && *len > 3)) {
+  if ((cp < 0x80UL && *len > 1) || (cp < 0x800UL && *len > 2) ||
+      (cp < 0x10000UL && *len > 3)) {
     return JSONFailure;
   }
 
   /* invalid unicode */
-  if (cp > 0x10FFFF) {
+  if (cp > 0x10FFFFUL) {
     return JSONFailure;
   }
 
   /* surrogate halves */
-  if (cp >= 0xD800 && cp <= 0xDFFF) {
+  if (cp >= 0xD800UL && cp <= 0xDFFFUL) {
     return JSONFailure;
   }
 
@@ -2060,6 +2086,9 @@ static enum json_result_t is_valid_utf8(const char *string, size_t string_len) {
 }
 
 static enum json_result_t is_decimal(const char *string, size_t length) {
+  if (length == 1 && string[0] == '-') {
+    return JSONFailure;
+  }
   if (length > 1 && string[0] == '0' && string[1] != '.') {
     return JSONFailure;
   }
@@ -2546,46 +2575,50 @@ static enum json_result_t skip_quotes(const char **string) {
 static enum json_result_t parse_utf16(const char **unprocessed,
                                       char **processed) {
   enum json_result_t rc;
-  unsigned int cp = 0;
-  unsigned int lead = 0;
-  unsigned int trail = 0;
+  unsigned int hex_unit = 0;
+  unsigned long cp = 0;
+  unsigned long lead = 0;
+  unsigned long trail = 0;
   char *processed_ptr = *processed;
   const char *unprocessed_ptr = *unprocessed;
 
   unprocessed_ptr++; /* skips u */
-  rc = parse_utf16_hex(unprocessed_ptr, &cp);
+  rc = parse_utf16_hex(unprocessed_ptr, &hex_unit);
   if (rc != JSONSuccess) {
     LOG_DEBUG("Error: %d\n", (int)rc);
     return rc;
   }
-  if (cp < 0x80) {
+  cp = (unsigned long)hex_unit;
+  if (cp < 0x80UL) {
     processed_ptr[0] = (char)cp; /* 0xxxxxxx */
-  } else if (cp < 0x800) {
-    processed_ptr[0] = (char)(((cp >> 6) & 0x1F) | 0xC0); /* 110xxxxx */
-    processed_ptr[1] = (char)(((cp) & 0x3F) | 0x80);      /* 10xxxxxx */
+  } else if (cp < 0x800UL) {
+    processed_ptr[0] = (char)(((cp >> 6) & 0x1FUL) | 0xC0UL); /* 110xxxxx */
+    processed_ptr[1] = (char)(((cp) & 0x3FUL) | 0x80UL);      /* 10xxxxxx */
     processed_ptr += 1;
-  } else if (cp < 0xD800 || cp > 0xDFFF) {
-    processed_ptr[0] = (char)(((cp >> 12) & 0x0F) | 0xE0); /* 1110xxxx */
-    processed_ptr[1] = (char)(((cp >> 6) & 0x3F) | 0x80);  /* 10xxxxxx */
-    processed_ptr[2] = (char)(((cp) & 0x3F) | 0x80);       /* 10xxxxxx */
+  } else if (cp < 0xD800UL || cp > 0xDFFFUL) {
+    processed_ptr[0] = (char)(((cp >> 12) & 0x0FUL) | 0xE0UL); /* 1110xxxx */
+    processed_ptr[1] = (char)(((cp >> 6) & 0x3FUL) | 0x80UL);  /* 10xxxxxx */
+    processed_ptr[2] = (char)(((cp) & 0x3FUL) | 0x80UL);       /* 10xxxxxx */
     processed_ptr += 2;
-  } else if (cp >= 0xD800 &&
-             cp <= 0xDBFF) { /* lead surrogate (0xD800..0xDBFF) */
+  } else if (cp >= 0xD800UL &&
+             cp <= 0xDBFFUL) { /* lead surrogate (0xD800..0xDBFF) */
     lead = cp;
     unprocessed_ptr += 4;
     if (*unprocessed_ptr++ != '\\' || *unprocessed_ptr++ != 'u') {
       return JSONFailure;
     }
-    rc = parse_utf16_hex(unprocessed_ptr, &trail);
-    if (rc != JSONSuccess || trail < 0xDC00 || trail > 0xDFFF) {
+    rc = parse_utf16_hex(unprocessed_ptr, &hex_unit);
+    trail = (unsigned long)hex_unit;
+    if (rc != JSONSuccess || trail < 0xDC00UL || trail > 0xDFFFUL) {
       return JSONFailure;
     }
-    cp = ((((lead - 0xD800) & 0x3FF) << 10) | ((trail - 0xDC00) & 0x3FF)) +
-         0x010000;
-    processed_ptr[0] = (char)((((cp >> 18) & 0x07) | 0xF0)); /* 11110xxx */
-    processed_ptr[1] = (char)((((cp >> 12) & 0x3F) | 0x80)); /* 10xxxxxx */
-    processed_ptr[2] = (char)((((cp >> 6) & 0x3F) | 0x80));  /* 10xxxxxx */
-    processed_ptr[3] = (char)((((cp) & 0x3F) | 0x80));       /* 10xxxxxx */
+    cp = ((((lead - 0xD800UL) & 0x3FFUL) << 10) |
+          ((trail - 0xDC00UL) & 0x3FFUL)) +
+         0x010000UL;
+    processed_ptr[0] = (char)((((cp >> 18) & 0x07UL) | 0xF0UL)); /* 11110xxx */
+    processed_ptr[1] = (char)((((cp >> 12) & 0x3FUL) | 0x80UL)); /* 10xxxxxx */
+    processed_ptr[2] = (char)((((cp >> 6) & 0x3FUL) | 0x80UL));  /* 10xxxxxx */
+    processed_ptr[3] = (char)((((cp) & 0x3FUL) | 0x80UL));       /* 10xxxxxx */
     processed_ptr += 3;
   } else { /* trail surrogate before lead surrogate */
     return JSONFailure;

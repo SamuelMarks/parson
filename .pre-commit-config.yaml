@@ -79,6 +79,16 @@ repos:
         entry: python -c "import urllib.request; exec(urllib.request.urlopen('https://raw.githubusercontent.com/SamuelMarks/c-ci/master/precommit_matrix.py').read())" valgrind gcc
         language: python
         pass_filenames: false
+      - id: build-msdos
+        name: Build (MS-DOS OpenWatcom, opt-in via msdos_testing)
+        entry: python -c "import urllib.request; exec(urllib.request.urlopen('https://raw.githubusercontent.com/SamuelMarks/c-ci/master/precommit_matrix.py').read())" build msdos
+        language: python
+        pass_filenames: false
+      - id: test-msdos
+        name: Test (MS-DOS OpenWatcom + QEMU, opt-in via msdos_testing)
+        entry: python -c "import urllib.request; exec(urllib.request.urlopen('https://raw.githubusercontent.com/SamuelMarks/c-ci/master/precommit_matrix.py').read())" test msdos
+        language: python
+        pass_filenames: false
       - id: update-shields
         name: Update README Shields
         entry: python -c "import urllib.request; exec(urllib.request.urlopen('https://raw.githubusercontent.com/SamuelMarks/c-ci/master/precommit_matrix.py').read())" shields

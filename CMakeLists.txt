@@ -7,12 +7,30 @@ if(POLICY CMP0091)
     cmake_policy(SET CMP0091 NEW)
 endif()
 
-if(CMAKE_SYSTEM_NAME STREQUAL "Windows" AND CMAKE_HOST_SYSTEM_NAME STREQUAL "Darwin")
+if((CMAKE_SYSTEM_NAME STREQUAL "Windows" OR CMAKE_SYSTEM_NAME STREQUAL "DOS") AND CMAKE_HOST_SYSTEM_NAME STREQUAL "Darwin")
     set(CMAKE_OSX_ARCHITECTURES "")
     set(CMAKE_TRY_COMPILE_TARGET_TYPE STATIC_LIBRARY)
 endif()
 
 project(parson VERSION 1.5.3 LANGUAGES C)
+
+if(CMAKE_SYSTEM_NAME STREQUAL "DOS")
+    if(NOT DEFINED CMAKE_INSTALL_LIBDIR)
+        set(CMAKE_INSTALL_LIBDIR "lib" CACHE PATH "Object code libraries")
+    endif()
+    if(CMAKE_C_COMPILER_ID STREQUAL "OpenWatcom")
+        get_filename_component(_parson_ow_cc_name "${CMAKE_C_COMPILER}" NAME)
+        if(_parson_ow_cc_name MATCHES "^wcl(\\.exe)?$")
+            if(NOT CMAKE_C_FLAGS MATCHES "(^| )-m[smlchf]( |$)")
+                set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -mm -zm -zc -zt=128")
+            endif()
+            if(NOT CMAKE_EXE_LINKER_FLAGS MATCHES "stack=")
+                set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} option stack=16384")
+            endif()
+        endif()
+        unset(_parson_ow_cc_name)
+    endif()
+endif()
 
 if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME)
     set(PARSON_IS_TOP_LEVEL ON)
@@ -40,6 +58,8 @@ set(_parson_unused_ci_vars
     "${CDD_MSVC_RTC}"
     "${VCPKG_CRT_LINKAGE}"
     "${TARGET_ARCH}"
+    "${PARSON_TESTING}"
+    "${parson_TESTING}"
     "${FETCHCONTENT_SOURCE_DIR_AUTO-WIN-MSVC}"
     "${FETCHCONTENT_SOURCE_DIR_AUTO_WIN_MSVC}"
     "${FETCHCONTENT_SOURCE_DIR_C-ABSTRACT-HTTP}"
@@ -135,6 +155,8 @@ if(MSVC)
     if(_parson_rtc_flag)
         list(APPEND _parson_strict_c_flags "$<$<CONFIG:Debug>:${_parson_rtc_flag}>")
     endif()
+elseif(WATCOM OR CMAKE_C_COMPILER_ID STREQUAL "OpenWatcom")
+    list(APPEND _parson_strict_c_flags -wx -we)
 else()
     list(APPEND _parson_strict_c_flags
         -ansi
@@ -209,20 +231,48 @@ if((BUILD_TESTING OR PARSON_BUILD_TESTING) AND PARSON_IS_TOP_LEVEL)
     include(CTest)
     include(FetchContent)
 
-    if(NOT DEFINED FETCHCONTENT_SOURCE_DIR_GREATEST AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/../greatest/CMakeLists.txt")
+    if(DEFINED FETCHCONTENT_SOURCE_DIR_GREATEST AND EXISTS "${FETCHCONTENT_SOURCE_DIR_GREATEST}/greatest.h")
+        if(NOT TARGET greatest::greatest)
+            add_library(greatest INTERFACE)
+            target_include_directories(greatest INTERFACE "${FETCHCONTENT_SOURCE_DIR_GREATEST}")
+            add_library(greatest::greatest ALIAS greatest)
+        endif()
+    elseif(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/../greatest/CMakeLists.txt")
         FetchContent_Declare(
             greatest
             SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../greatest"
         )
+        set(GREATEST_BUILD_TESTING OFF CACHE BOOL "" FORCE)
+        FetchContent_MakeAvailable(greatest)
+    elseif(CMAKE_GENERATOR STREQUAL "Watcom WMake")
+        set(_parson_greatest_dir "${CMAKE_CURRENT_BINARY_DIR}/_deps/greatest-header")
+        file(MAKE_DIRECTORY "${_parson_greatest_dir}")
+        if(NOT EXISTS "${_parson_greatest_dir}/greatest.h")
+            file(DOWNLOAD
+                "https://raw.githubusercontent.com/SamuelMarks/greatest/master/greatest.h"
+                "${_parson_greatest_dir}/greatest.h"
+                TLS_VERIFY ON
+                STATUS _parson_dl_status
+            )
+            list(GET _parson_dl_status 0 _parson_dl_code)
+            if(NOT _parson_dl_code EQUAL 0)
+                message(FATAL_ERROR "Failed to download greatest.h: ${_parson_dl_status}")
+            endif()
+        endif()
+        if(NOT TARGET greatest::greatest)
+            add_library(greatest INTERFACE)
+            target_include_directories(greatest INTERFACE "${_parson_greatest_dir}")
+            add_library(greatest::greatest ALIAS greatest)
+        endif()
     else()
         FetchContent_Declare(
             greatest
             GIT_REPOSITORY https://github.com/SamuelMarks/greatest.git
             GIT_TAG master
         )
+        set(GREATEST_BUILD_TESTING OFF CACHE BOOL "" FORCE)
+        FetchContent_MakeAvailable(greatest)
     endif()
-    set(GREATEST_BUILD_TESTING OFF CACHE BOOL "" FORCE)
-    FetchContent_MakeAvailable(greatest)
 
     file(COPY "${CMAKE_CURRENT_SOURCE_DIR}/tests" DESTINATION "${CMAKE_CURRENT_BINARY_DIR}")
 
