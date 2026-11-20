@@ -23,12 +23,12 @@
  THE SOFTWARE.
 */
 /**
- * \\file parson.c
- * \\brief Lightweight JSON library implementation file
- * \\author Krzysztof Gabis
+ * \file parson.c
+ * \brief Lightweight JSON library implementation file
+ * \author Krzysztof Gabis
  */
 
-/** \\brief Trigger implementation logic in header */
+/** \brief Trigger implementation logic in header */
 #define PARSON_IMPLEMENTATION
 /* clang-format off */
 #include "parson.h"

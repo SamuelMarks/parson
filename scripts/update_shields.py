@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import glob
 import subprocess
 import re
 import sys
@@ -9,29 +10,38 @@ def get_test_coverage():
     if not shutil.which("gcc") or not shutil.which("gcov"):
         return None
 
+    inc_flags = ["-I."]
+    for candidate in ["../greatest"] + glob.glob("build*/_deps/greatest-src"):
+        if os.path.exists(os.path.join(candidate, "greatest.h")):
+            inc_flags.append("-I" + candidate)
+            break
+
     exe_name = "test_coverage.exe" if os.name == 'nt' else "test_coverage"
-    cmd_build = ["gcc", "-O0", "-g", "--coverage", "-Wall", "-Wextra", "-std=c89", "-pedantic-errors", "-DTESTS_MAIN", "-DPARSON_SINGLE_HEADER", "-I.", "-o", exe_name, "tests/tests.c"]
+    cmd_build = ["gcc", "-O0", "-g", "--coverage", "-Wall", "-Wextra", "-std=c89", "-pedantic-errors", "-DTESTS_MAIN", "-DPARSON_SINGLE_HEADER", "-DPARSON_DEBUG"] + inc_flags + ["-o", exe_name, "tests/tests.c"]
 
     res_build = subprocess.run(cmd_build, check=False)
     if res_build.returncode != 0:
         return None
 
-    subprocess.run(["./" + exe_name] if os.name != 'nt' else [exe_name], check=False)
+    subprocess.run(["./" + exe_name] if os.name != 'nt' else [exe_name], check=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
-    res = subprocess.run(["gcov", "test_coverage-parson.gcno"], capture_output=True, text=True)
+    gcno = "test_coverage-tests.gcno" if os.path.exists("test_coverage-tests.gcno") else "tests.gcno"
+    res = subprocess.run(["gcov", gcno], capture_output=True, text=True)
 
-    files_to_remove = [exe_name, "test_coverage-parson.gcda", "test_coverage-parson.gcno", "test_coverage-tests.gcda", "test_coverage-tests.gcno", "parson.h.gcov", "parson.c.gcov"]
-    for f in files_to_remove:
+    for f in [exe_name] + glob.glob("*.gcda") + glob.glob("*.gcno") + glob.glob("*.gcov"):
         try:
             os.remove(f)
         except OSError:
             pass
+    shutil.rmtree(exe_name + ".dSYM", ignore_errors=True)
 
-    for line in res.stdout.splitlines():
-        if "Lines executed:" in line:
-            m = re.search(r"Lines executed:([0-9\.]+)%", line)
-            if m:
-                return 100.0
+    lines = res.stdout.splitlines()
+    for idx, line in enumerate(lines):
+        if "parson.h" in line:
+            for follow in lines[idx + 1:idx + 4]:
+                m = re.search(r"Lines executed:([0-9\.]+)%", follow)
+                if m:
+                    return float(m.group(1))
     return 100.0
 
 def get_doc_coverage():
