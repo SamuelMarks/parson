@@ -55,7 +55,7 @@
 
 #ifdef __cplusplus
 extern "C" {
-#endif
+#endif /* __cplusplus */
 
 #ifndef PARSON_API
 #if defined(_WIN32) || defined(__CYGWIN__)
@@ -1172,11 +1172,17 @@ static void parson_log_debug(const char *format, ...) {
 #define SIZEOF_TOKEN(a) (sizeof(a) - 1)
 /** \brief Advances the string pointer by one character */
 #define SKIP_CHAR(str) ((*str)++)
-/** \brief Macro to skip whitespace characters */
-#define SKIP_WHITESPACES(str)                                                  \
-  while (isspace((unsigned char)(**str))) {                                    \
-    SKIP_CHAR(str);                                                            \
+/**
+ * \brief Advance string cursor past all ASCII/locale whitespace characters
+ * \param str Pointer to string cursor to advance
+ */
+static void skip_whitespaces(const char **str) {
+  while ((isspace)((unsigned char)(**str))) {
+    SKIP_CHAR(str);
   }
+}
+/** \brief Macro to skip whitespace characters */
+#define SKIP_WHITESPACES(str) skip_whitespaces(str)
 /** \brief Returns the maximum of two values */
 #define MAX(a, b) ((a) > (b) ? (a) : (b))
 
@@ -1840,7 +1846,7 @@ static enum json_result_t parson_strdup(const char *string, char **out_string) {
 #if defined(_MSC_VER)
   strcpy_s(output_string, len + 1, string);
 #else
-  strcpy(output_string, string);
+  (strcpy)(output_string, string);
 #endif
   *out_string = output_string;
   return JSONSuccess;
@@ -2600,8 +2606,7 @@ static enum json_result_t parse_utf16(const char **unprocessed,
     processed_ptr[1] = (char)(((cp >> 6) & 0x3FUL) | 0x80UL);  /* 10xxxxxx */
     processed_ptr[2] = (char)(((cp) & 0x3FUL) | 0x80UL);       /* 10xxxxxx */
     processed_ptr += 2;
-  } else if (cp >= 0xD800UL &&
-             cp <= 0xDBFFUL) { /* lead surrogate (0xD800..0xDBFF) */
+  } else if (cp <= 0xDBFFUL) { /* lead surrogate (0xD800..0xDBFF) */
     lead = cp;
     unprocessed_ptr += 4;
     if (*unprocessed_ptr++ != '\\' || *unprocessed_ptr++ != 'u') {
@@ -4105,7 +4110,14 @@ PARSON_API JSON_Status json_array_remove(JSON_Array *array, size_t ix) {
   }
   json_value_free(json_array_get_value(array, ix));
   to_move_bytes = (json_array_get_count(array) - 1 - ix) * sizeof(JSON_Value *);
-  memmove(array->items + ix, array->items + ix + 1, to_move_bytes);
+  if (to_move_bytes > 0) {
+#if defined(_MSC_VER)
+    memmove_s(array->items + ix, (array->capacity - ix) * sizeof(JSON_Value *),
+              array->items + ix + 1, to_move_bytes);
+#else
+    memmove(array->items + ix, array->items + ix + 1, to_move_bytes);
+#endif
+  }
   array->count -= 1;
   return JSONSuccess;
 }
@@ -4126,13 +4138,16 @@ PARSON_API JSON_Status json_array_replace_value(JSON_Array *array, size_t ix,
 /* Implementation */
 PARSON_API JSON_Status json_array_replace_string(JSON_Array *array, size_t i,
                                                  const char *string) {
+  JSON_Status rc = JSONFailure;
   JSON_Value *value = json_value_init_string(string);
   if (value == NULL) {
     return JSONFailure;
   }
-  if (json_array_replace_value(array, i, value) != JSONSuccess) {
+  rc = json_array_replace_value(array, i, value);
+  if (rc != JSONSuccess) {
+    LOG_DEBUG("Error: %d\n", (int)rc);
     json_value_free(value);
-    return JSONFailure;
+    return rc;
   }
   return JSONSuccess;
 }
@@ -4142,13 +4157,16 @@ PARSON_API JSON_Status json_array_replace_string_with_len(JSON_Array *array,
                                                           size_t i,
                                                           const char *string,
                                                           size_t len) {
+  JSON_Status rc = JSONFailure;
   JSON_Value *value = json_value_init_string_with_len(string, len);
   if (value == NULL) {
     return JSONFailure;
   }
-  if (json_array_replace_value(array, i, value) != JSONSuccess) {
+  rc = json_array_replace_value(array, i, value);
+  if (rc != JSONSuccess) {
+    LOG_DEBUG("Error: %d\n", (int)rc);
     json_value_free(value);
-    return JSONFailure;
+    return rc;
   }
   return JSONSuccess;
 }
@@ -4156,13 +4174,16 @@ PARSON_API JSON_Status json_array_replace_string_with_len(JSON_Array *array,
 /* Implementation */
 PARSON_API JSON_Status json_array_replace_number(JSON_Array *array, size_t i,
                                                  double number) {
+  JSON_Status rc = JSONFailure;
   JSON_Value *value = json_value_init_number(number);
   if (value == NULL) {
     return JSONFailure;
   }
-  if (json_array_replace_value(array, i, value) != JSONSuccess) {
+  rc = json_array_replace_value(array, i, value);
+  if (rc != JSONSuccess) {
+    LOG_DEBUG("Error: %d\n", (int)rc);
     json_value_free(value);
-    return JSONFailure;
+    return rc;
   }
   return JSONSuccess;
 }
@@ -4170,26 +4191,32 @@ PARSON_API JSON_Status json_array_replace_number(JSON_Array *array, size_t i,
 /* Implementation */
 PARSON_API JSON_Status json_array_replace_boolean(JSON_Array *array, size_t i,
                                                   int boolean) {
+  JSON_Status rc = JSONFailure;
   JSON_Value *value = json_value_init_boolean(boolean);
   if (value == NULL) {
     return JSONFailure;
   }
-  if (json_array_replace_value(array, i, value) != JSONSuccess) {
+  rc = json_array_replace_value(array, i, value);
+  if (rc != JSONSuccess) {
+    LOG_DEBUG("Error: %d\n", (int)rc);
     json_value_free(value);
-    return JSONFailure;
+    return rc;
   }
   return JSONSuccess;
 }
 
 /* Implementation */
 PARSON_API JSON_Status json_array_replace_null(JSON_Array *array, size_t i) {
+  JSON_Status rc = JSONFailure;
   JSON_Value *value = json_value_init_null();
   if (value == NULL) {
     return JSONFailure;
   }
-  if (json_array_replace_value(array, i, value) != JSONSuccess) {
+  rc = json_array_replace_value(array, i, value);
+  if (rc != JSONSuccess) {
+    LOG_DEBUG("Error: %d\n", (int)rc);
     json_value_free(value);
-    return JSONFailure;
+    return rc;
   }
   return JSONSuccess;
 }
@@ -4219,13 +4246,16 @@ PARSON_API JSON_Status json_array_append_value(JSON_Array *array,
 /* Implementation */
 PARSON_API JSON_Status json_array_append_string(JSON_Array *array,
                                                 const char *string) {
+  JSON_Status rc = JSONFailure;
   JSON_Value *value = json_value_init_string(string);
   if (value == NULL) {
     return JSONFailure;
   }
-  if (json_array_append_value(array, value) != JSONSuccess) {
+  rc = json_array_append_value(array, value);
+  if (rc != JSONSuccess) {
+    LOG_DEBUG("Error: %d\n", (int)rc);
     json_value_free(value);
-    return JSONFailure;
+    return rc;
   }
   return JSONSuccess;
 }
@@ -4234,13 +4264,16 @@ PARSON_API JSON_Status json_array_append_string(JSON_Array *array,
 PARSON_API JSON_Status json_array_append_string_with_len(JSON_Array *array,
                                                          const char *string,
                                                          size_t len) {
+  JSON_Status rc = JSONFailure;
   JSON_Value *value = json_value_init_string_with_len(string, len);
   if (value == NULL) {
     return JSONFailure;
   }
-  if (json_array_append_value(array, value) != JSONSuccess) {
+  rc = json_array_append_value(array, value);
+  if (rc != JSONSuccess) {
+    LOG_DEBUG("Error: %d\n", (int)rc);
     json_value_free(value);
-    return JSONFailure;
+    return rc;
   }
   return JSONSuccess;
 }
@@ -4248,13 +4281,16 @@ PARSON_API JSON_Status json_array_append_string_with_len(JSON_Array *array,
 /* Implementation */
 PARSON_API JSON_Status json_array_append_number(JSON_Array *array,
                                                 double number) {
+  JSON_Status rc = JSONFailure;
   JSON_Value *value = json_value_init_number(number);
   if (value == NULL) {
     return JSONFailure;
   }
-  if (json_array_append_value(array, value) != JSONSuccess) {
+  rc = json_array_append_value(array, value);
+  if (rc != JSONSuccess) {
+    LOG_DEBUG("Error: %d\n", (int)rc);
     json_value_free(value);
-    return JSONFailure;
+    return rc;
   }
   return JSONSuccess;
 }
@@ -4262,26 +4298,32 @@ PARSON_API JSON_Status json_array_append_number(JSON_Array *array,
 /* Implementation */
 PARSON_API JSON_Status json_array_append_boolean(JSON_Array *array,
                                                  int boolean) {
+  JSON_Status rc = JSONFailure;
   JSON_Value *value = json_value_init_boolean(boolean);
   if (value == NULL) {
     return JSONFailure;
   }
-  if (json_array_append_value(array, value) != JSONSuccess) {
+  rc = json_array_append_value(array, value);
+  if (rc != JSONSuccess) {
+    LOG_DEBUG("Error: %d\n", (int)rc);
     json_value_free(value);
-    return JSONFailure;
+    return rc;
   }
   return JSONSuccess;
 }
 
 /* Implementation */
 PARSON_API JSON_Status json_array_append_null(JSON_Array *array) {
+  JSON_Status rc = JSONFailure;
   JSON_Value *value = json_value_init_null();
   if (value == NULL) {
     return JSONFailure;
   }
-  if (json_array_append_value(array, value) != JSONSuccess) {
+  rc = json_array_append_value(array, value);
+  if (rc != JSONSuccess) {
+    LOG_DEBUG("Error: %d\n", (int)rc);
     json_value_free(value);
-    return JSONFailure;
+    return rc;
   }
   return JSONSuccess;
 }
@@ -4349,11 +4391,12 @@ PARSON_API JSON_Status json_object_set_string(JSON_Object *object,
                                               const char *name,
                                               const char *string) {
   JSON_Value *value = json_value_init_string(string);
-  JSON_Status status = json_object_set_value(object, name, value);
-  if (status != JSONSuccess) {
+  JSON_Status rc = json_object_set_value(object, name, value);
+  if (rc != JSONSuccess) {
+    LOG_DEBUG("Error: %d\n", (int)rc);
     json_value_free(value);
   }
-  return status;
+  return rc;
 }
 
 /* Implementation */
@@ -4362,44 +4405,48 @@ PARSON_API JSON_Status json_object_set_string_with_len(JSON_Object *object,
                                                        const char *string,
                                                        size_t len) {
   JSON_Value *value = json_value_init_string_with_len(string, len);
-  JSON_Status status = json_object_set_value(object, name, value);
-  if (status != JSONSuccess) {
+  JSON_Status rc = json_object_set_value(object, name, value);
+  if (rc != JSONSuccess) {
+    LOG_DEBUG("Error: %d\n", (int)rc);
     json_value_free(value);
   }
-  return status;
+  return rc;
 }
 
 /* Implementation */
 PARSON_API JSON_Status json_object_set_number(JSON_Object *object,
                                               const char *name, double number) {
   JSON_Value *value = json_value_init_number(number);
-  JSON_Status status = json_object_set_value(object, name, value);
-  if (status != JSONSuccess) {
+  JSON_Status rc = json_object_set_value(object, name, value);
+  if (rc != JSONSuccess) {
+    LOG_DEBUG("Error: %d\n", (int)rc);
     json_value_free(value);
   }
-  return status;
+  return rc;
 }
 
 /* Implementation */
 PARSON_API JSON_Status json_object_set_boolean(JSON_Object *object,
                                                const char *name, int boolean) {
   JSON_Value *value = json_value_init_boolean(boolean);
-  JSON_Status status = json_object_set_value(object, name, value);
-  if (status != JSONSuccess) {
+  JSON_Status rc = json_object_set_value(object, name, value);
+  if (rc != JSONSuccess) {
+    LOG_DEBUG("Error: %d\n", (int)rc);
     json_value_free(value);
   }
-  return status;
+  return rc;
 }
 
 /* Implementation */
 PARSON_API JSON_Status json_object_set_null(JSON_Object *object,
                                             const char *name) {
   JSON_Value *value = json_value_init_null();
-  JSON_Status status = json_object_set_value(object, name, value);
-  if (status != JSONSuccess) {
+  JSON_Status rc = json_object_set_value(object, name, value);
+  if (rc != JSONSuccess) {
+    LOG_DEBUG("Error: %d\n", (int)rc);
     json_value_free(value);
   }
-  return status;
+  return rc;
 }
 
 /* Implementation */
@@ -4407,6 +4454,7 @@ PARSON_API JSON_Status json_object_dotset_value(JSON_Object *object,
                                                 const char *name,
                                                 JSON_Value *value) {
   enum json_result_t rc;
+  enum json_result_t cleanup_rc;
   const char *dot_pos = NULL;
   JSON_Value *temp_value = NULL;
   JSON_Value *new_value = NULL;
@@ -4439,13 +4487,16 @@ PARSON_API JSON_Status json_object_dotset_value(JSON_Object *object,
   new_object = json_value_get_object(new_value);
   status = json_object_dotset_value(new_object, dot_pos + 1, value);
   if (status != JSONSuccess) {
+    LOG_DEBUG("Error: %d\n", (int)status);
     json_value_free(new_value);
-    return JSONFailure;
+    return status;
   }
   rc = parson_strndup(name, name_len, &name_copy);
   if (rc != JSONSuccess) {
     LOG_DEBUG("Error: %d\n", (int)rc);
-    (void)json_object_dotremove_internal(new_object, dot_pos + 1, PARSON_FALSE);
+    cleanup_rc =
+        json_object_dotremove_internal(new_object, dot_pos + 1, PARSON_FALSE);
+    (void)cleanup_rc;
     json_value_free(new_value);
     return JSONFailure;
   }
@@ -4453,7 +4504,9 @@ PARSON_API JSON_Status json_object_dotset_value(JSON_Object *object,
   if (rc != JSONSuccess) {
     LOG_DEBUG("Error: %d\n", (int)rc);
     parson_free(name_copy);
-    (void)json_object_dotremove_internal(new_object, dot_pos + 1, PARSON_FALSE);
+    cleanup_rc =
+        json_object_dotremove_internal(new_object, dot_pos + 1, PARSON_FALSE);
+    (void)cleanup_rc;
     json_value_free(new_value);
     return JSONFailure;
   }
@@ -4464,13 +4517,16 @@ PARSON_API JSON_Status json_object_dotset_value(JSON_Object *object,
 PARSON_API JSON_Status json_object_dotset_string(JSON_Object *object,
                                                  const char *name,
                                                  const char *string) {
+  JSON_Status rc = JSONFailure;
   JSON_Value *value = json_value_init_string(string);
   if (value == NULL) {
     return JSONFailure;
   }
-  if (json_object_dotset_value(object, name, value) != JSONSuccess) {
+  rc = json_object_dotset_value(object, name, value);
+  if (rc != JSONSuccess) {
+    LOG_DEBUG("Error: %d\n", (int)rc);
     json_value_free(value);
-    return JSONFailure;
+    return rc;
   }
   return JSONSuccess;
 }
@@ -4480,13 +4536,16 @@ PARSON_API JSON_Status json_object_dotset_string_with_len(JSON_Object *object,
                                                           const char *name,
                                                           const char *string,
                                                           size_t len) {
+  JSON_Status rc = JSONFailure;
   JSON_Value *value = json_value_init_string_with_len(string, len);
   if (value == NULL) {
     return JSONFailure;
   }
-  if (json_object_dotset_value(object, name, value) != JSONSuccess) {
+  rc = json_object_dotset_value(object, name, value);
+  if (rc != JSONSuccess) {
+    LOG_DEBUG("Error: %d\n", (int)rc);
     json_value_free(value);
-    return JSONFailure;
+    return rc;
   }
   return JSONSuccess;
 }
@@ -4495,13 +4554,16 @@ PARSON_API JSON_Status json_object_dotset_string_with_len(JSON_Object *object,
 PARSON_API JSON_Status json_object_dotset_number(JSON_Object *object,
                                                  const char *name,
                                                  double number) {
+  JSON_Status rc = JSONFailure;
   JSON_Value *value = json_value_init_number(number);
   if (value == NULL) {
     return JSONFailure;
   }
-  if (json_object_dotset_value(object, name, value) != JSONSuccess) {
+  rc = json_object_dotset_value(object, name, value);
+  if (rc != JSONSuccess) {
+    LOG_DEBUG("Error: %d\n", (int)rc);
     json_value_free(value);
-    return JSONFailure;
+    return rc;
   }
   return JSONSuccess;
 }
@@ -4510,13 +4572,16 @@ PARSON_API JSON_Status json_object_dotset_number(JSON_Object *object,
 PARSON_API JSON_Status json_object_dotset_boolean(JSON_Object *object,
                                                   const char *name,
                                                   int boolean) {
+  JSON_Status rc = JSONFailure;
   JSON_Value *value = json_value_init_boolean(boolean);
   if (value == NULL) {
     return JSONFailure;
   }
-  if (json_object_dotset_value(object, name, value) != JSONSuccess) {
+  rc = json_object_dotset_value(object, name, value);
+  if (rc != JSONSuccess) {
+    LOG_DEBUG("Error: %d\n", (int)rc);
     json_value_free(value);
-    return JSONFailure;
+    return rc;
   }
   return JSONSuccess;
 }
@@ -4524,13 +4589,16 @@ PARSON_API JSON_Status json_object_dotset_boolean(JSON_Object *object,
 /* Implementation */
 PARSON_API JSON_Status json_object_dotset_null(JSON_Object *object,
                                                const char *name) {
+  JSON_Status rc = JSONFailure;
   JSON_Value *value = json_value_init_null();
   if (value == NULL) {
     return JSONFailure;
   }
-  if (json_object_dotset_value(object, name, value) != JSONSuccess) {
+  rc = json_object_dotset_value(object, name, value);
+  if (rc != JSONSuccess) {
+    LOG_DEBUG("Error: %d\n", (int)rc);
     json_value_free(value);
-    return JSONFailure;
+    return rc;
   }
   return JSONSuccess;
 }
@@ -4570,6 +4638,7 @@ PARSON_API JSON_Status json_object_clear(JSON_Object *object) {
 /* Implementation */
 PARSON_API JSON_Status json_validate(const JSON_Value *schema,
                                      const JSON_Value *value) {
+  JSON_Status rc = JSONFailure;
   JSON_Value *temp_schema_value = NULL;
   JSON_Value *temp_value = NULL;
   JSON_Array *schema_array = NULL;
@@ -4602,8 +4671,10 @@ PARSON_API JSON_Status json_validate(const JSON_Value *schema,
     temp_schema_value = json_array_get_value(schema_array, 0);
     for (i = 0; i < json_array_get_count(value_array); i++) {
       temp_value = json_array_get_value(value_array, i);
-      if (json_validate(temp_schema_value, temp_value) != JSONSuccess) {
-        return JSONFailure;
+      rc = json_validate(temp_schema_value, temp_value);
+      if (rc != JSONSuccess) {
+        LOG_DEBUG("Error: %d\n", (int)rc);
+        return rc;
       }
     }
     return JSONSuccess;
@@ -4624,8 +4695,10 @@ PARSON_API JSON_Status json_validate(const JSON_Value *schema,
       if (temp_value == NULL) {
         return JSONFailure;
       }
-      if (json_validate(temp_schema_value, temp_value) != JSONSuccess) {
-        return JSONFailure;
+      rc = json_validate(temp_schema_value, temp_value);
+      if (rc != JSONSuccess) {
+        LOG_DEBUG("Error: %d\n", (int)rc);
+        return rc;
       }
     }
     return JSONSuccess;

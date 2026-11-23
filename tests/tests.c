@@ -176,6 +176,8 @@ static enum json_result_t test_read_file(const char *file_path,
   FILE *fp = NULL;
   size_t size_to_read = 0;
   size_t size_read = 0;
+  size_t read_ix = 0;
+  size_t write_ix = 0;
   long pos = 0;
   char *file_contents = NULL;
 
@@ -213,7 +215,14 @@ static enum json_result_t test_read_file(const char *file_path,
     return JSONFailure;
   }
   fclose(fp);
-  file_contents[size_read] = '\0';
+  for (read_ix = 0; read_ix < size_read; read_ix++) {
+    if (file_contents[read_ix] == '\r' && read_ix + 1 < size_read &&
+        file_contents[read_ix + 1] == '\n') {
+      continue;
+    }
+    file_contents[write_ix++] = file_contents[read_ix];
+  }
+  file_contents[write_ix] = '\0';
   *out_contents = file_contents;
   return JSONSuccess;
 }
@@ -1380,7 +1389,9 @@ SUITE(parson_suite) {
   RUN_TEST(test_object_clear_and_default_allocators);
 }
 
+/** @cond DOXYGEN_SUPPRESS */
 GREATEST_MAIN_DEFS();
+/** @endcond */
 
 #ifdef TESTS_MAIN
 /**
@@ -1400,6 +1411,9 @@ int main(int argc, char *argv[]) {
 int tests_main(int argc, char *argv[]);
 int tests_main(int argc, char *argv[]) {
 #endif
+#if defined(__DOS__) || defined(MSDOS) || defined(_MSDOS) || defined(__MSDOS__)
+  JSON_Status dos_rc = JSONFailure;
+#endif
 #ifdef __WATCOMC__
   _control87(_CW_DEFAULT, _MCW_EM | _MCW_PC | _MCW_RC | _MCW_IC);
 #endif
@@ -1408,7 +1422,8 @@ int tests_main(int argc, char *argv[]) {
     argc = 1;
   }
 #if defined(__DOS__) || defined(MSDOS) || defined(_MSDOS) || defined(__MSDOS__)
-  if (dos_fixtures_setup() != 0) {
+  dos_rc = dos_fixtures_setup();
+  if (dos_rc != JSONSuccess) {
     return 1;
   }
 #endif

@@ -10,6 +10,10 @@
 /** @brief Header guard for DOS test fixture helpers */
 #define PARSON_DOS_FIXTURES_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
+
 #if defined(__WATCOMC__) && defined(__I86__)
 /** @brief Place fixture byte tables in far data segments on 16-bit Real Mode */
 #define PARSON_DOS_FAR __far
@@ -590,85 +594,103 @@ static const unsigned char PARSON_DOS_FAR k_dos_test_5[410] = {
  * @param dos_name 8.3 filename in current working directory
  * @param data Far pointer to byte buffer
  * @param len Number of bytes to write
- * @return 0 on success, -1 on I/O failure
+ * @return JSONSuccess on success, JSONFailure on I/O failure
  */
-static int dos_write_far_bytes(const char *dos_name,
-                               const unsigned char PARSON_DOS_FAR *data,
-                               size_t len) {
-  FILE *fp = fopen(dos_name, "wb");
+static JSON_Status dos_write_far_bytes(const char *dos_name,
+                                       const unsigned char PARSON_DOS_FAR *data,
+                                       size_t len) {
+  FILE *fp = NULL;
   size_t i = 0;
+#if defined(_MSC_VER)
+  if (fopen_s(&fp, dos_name, "wb") != 0) {
+    fp = NULL;
+  }
+#else
+  fp = fopen(dos_name, "wb");
+#endif
   if (fp == NULL) {
-    return -1;
+    return JSONFailure;
   }
   for (i = 0; i < len; i++) {
     if (fputc((int)data[i], fp) == EOF) {
       fclose(fp);
-      return -1;
+      return JSONFailure;
     }
   }
   if (fclose(fp) != 0) {
-    return -1;
+    return JSONFailure;
   }
-  return 0;
+  return JSONSuccess;
 }
 
 /**
  * @brief Materialize all test fixture files using flat 8.3 filenames for DOS
- * @return 0 on success, -1 on I/O failure
+ * @return JSONSuccess on success, JSONFailure on I/O failure
  */
-static int dos_fixtures_setup(void) {
+static JSON_Status dos_fixtures_setup(void) {
+  JSON_Status rc = JSONFailure;
   FILE *fp = NULL;
   int i = 0;
   static const char deep_tok[] = "\"Too deep\"";
 
-  if (dos_write_far_bytes("t1_1.txt", k_dos_test_1_1, sizeof(k_dos_test_1_1)) !=
-      0) {
-    return -1;
+  rc = dos_write_far_bytes("t1_1.txt", k_dos_test_1_1, sizeof(k_dos_test_1_1));
+  if (rc != JSONSuccess) {
+    return rc;
   }
-  if (dos_write_far_bytes("t1_3.txt", k_dos_test_1_3, sizeof(k_dos_test_1_3)) !=
-      0) {
-    return -1;
+  rc = dos_write_far_bytes("t1_3.txt", k_dos_test_1_3, sizeof(k_dos_test_1_3));
+  if (rc != JSONSuccess) {
+    return rc;
   }
-  if (dos_write_far_bytes("t2.txt", k_dos_test_2, sizeof(k_dos_test_2)) != 0) {
-    return -1;
+  rc = dos_write_far_bytes("t2.txt", k_dos_test_2, sizeof(k_dos_test_2));
+  if (rc != JSONSuccess) {
+    return rc;
   }
-  if (dos_write_far_bytes("t2_comm.txt", k_dos_test_2_comments,
-                          sizeof(k_dos_test_2_comments)) != 0) {
-    return -1;
+  rc = dos_write_far_bytes("t2_comm.txt", k_dos_test_2_comments,
+                           sizeof(k_dos_test_2_comments));
+  if (rc != JSONSuccess) {
+    return rc;
   }
-  if (dos_write_far_bytes("t2_pret.txt", k_dos_test_2_pretty,
-                          sizeof(k_dos_test_2_pretty)) != 0) {
-    return -1;
+  rc = dos_write_far_bytes("t2_pret.txt", k_dos_test_2_pretty,
+                           sizeof(k_dos_test_2_pretty));
+  if (rc != JSONSuccess) {
+    return rc;
   }
-  if (dos_write_far_bytes("t5.txt", k_dos_test_5, sizeof(k_dos_test_5)) != 0) {
-    return -1;
+  rc = dos_write_far_bytes("t5.txt", k_dos_test_5, sizeof(k_dos_test_5));
+  if (rc != JSONSuccess) {
+    return rc;
   }
+#if defined(_MSC_VER)
+  if (fopen_s(&fp, "t1_2.txt", "wb") != 0) {
+    fp = NULL;
+  }
+#else
   fp = fopen("t1_2.txt", "wb");
+#endif
   if (fp == NULL) {
-    return -1;
+    return JSONFailure;
   }
   for (i = 0; i < 2049; i++) {
     if (fputc('[', fp) == EOF) {
       fclose(fp);
-      return -1;
+      return JSONFailure;
     }
   }
   for (i = 0; deep_tok[i] != '\0'; i++) {
     if (fputc((int)(unsigned char)deep_tok[i], fp) == EOF) {
       fclose(fp);
-      return -1;
+      return JSONFailure;
     }
   }
   for (i = 0; i < 2049; i++) {
     if (fputc(']', fp) == EOF) {
       fclose(fp);
-      return -1;
+      return JSONFailure;
     }
   }
   if (fputc('\n', fp) == EOF || fclose(fp) != 0) {
-    return -1;
+    return JSONFailure;
   }
-  return 0;
+  return JSONSuccess;
 }
 
 /**
@@ -737,5 +759,9 @@ static const char *dos_map_fixture_path(const char *filename) {
   }
   return filename;
 }
+
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */
 
 #endif /* PARSON_DOS_FIXTURES_H */

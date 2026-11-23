@@ -406,6 +406,41 @@ TEST test_json_error_coverage(void) {
   ASSERT_EQ(2.0, json_object_get_number(obj_real, "z"));
   ASSERT_EQ(3.0, json_object_get_number(obj_real, "k"));
 
+  /* Public API branch coverage: UTF-8 continuation bytes, partial BOMs,
+   * missing key type check, equal-length unequal strings, and "%.f"/"%." */
+  ASSERT(json_value_init_string("\xC2\x20") == NULL);
+  ASSERT(json_value_init_string("\xE0\x20\x80") == NULL);
+  ASSERT(json_value_init_string("\xE0\xA0\x20") == NULL);
+  ASSERT(json_value_init_string("\xF0\x20\x80\x80") == NULL);
+  ASSERT(json_value_init_string("\xF0\x90\x20\x80") == NULL);
+  ASSERT(json_value_init_string("\xF0\x90\x80\x20") == NULL);
+  ASSERT(json_parse_string("\xEFx") == NULL);
+  ASSERT(json_parse_string("\xEF\xBBx") == NULL);
+  ASSERT_EQ(0,
+            json_object_has_value_of_type(obj_real, "missing_key", JSONNumber));
+  {
+    JSON_Value *str_abc = json_value_init_string("abc");
+    JSON_Value *str_abd = json_value_init_string("abd");
+    JSON_Value *fmt_num = json_value_init_number(1.5);
+    JSON_Value *rem_arr_val = json_value_init_array();
+    JSON_Array *rem_arr = json_value_get_array(rem_arr_val);
+
+    ASSERT_EQ(0, json_value_equals(str_abc, str_abd));
+    json_set_float_serialization_format("%.");
+    ASSERT_EQ(0u, json_serialization_size(fmt_num));
+    json_set_float_serialization_format(NULL);
+
+    ASSERT_EQ(JSONSuccess, json_array_append_number(rem_arr, 1.0));
+    ASSERT_EQ(JSONSuccess, json_array_append_number(rem_arr, 2.0));
+    ASSERT_EQ(JSONSuccess, json_array_remove(rem_arr, 0));
+    ASSERT_EQ(JSONSuccess, json_array_remove(rem_arr, 0));
+
+    json_value_free(rem_arr_val);
+    json_value_free(fmt_num);
+    json_value_free(str_abc);
+    json_value_free(str_abd);
+  }
+
 #ifdef PARSON_SINGLE_HEADER
   {
     unsigned int hex_out = 0;
@@ -583,7 +618,142 @@ TEST test_json_error_coverage(void) {
       arr_p->items[0] = bad_val;
       ASSERT_EQ(0u, json_serialization_size(arr_wrap));
       arr_p->count = 0;
+      ASSERT_EQ(JSONSuccess, json_array_resize(arr_p, 32));
       json_value_free(arr_wrap);
+    }
+
+    /* process_string with embedded NUL before input_len */
+    {
+      size_t proc_len = 0;
+      char *proc_str = NULL;
+      ASSERT_EQ(JSONSuccess, process_string("", 1, &proc_len, &proc_str));
+      ASSERT_EQ(0u, proc_len);
+      parson_free(proc_str);
+    }
+
+    /* json_object_grow_and_rehash when probe mask exhausts cells within bounds
+     */
+    {
+      struct json_object_t ovf_obj;
+      char ovf_key_storage[9][4];
+      char *ovf_names[9];
+      JSON_Value *ovf_vals[9];
+      unsigned long ovf_hashes[9];
+      int idx = 0;
+
+      memset(&ovf_obj, 0, sizeof(ovf_obj));
+      for (idx = 0; idx < 9; idx++) {
+        ovf_key_storage[idx][0] = 'a';
+        ovf_key_storage[idx][1] = (char)('A' + idx);
+        ovf_key_storage[idx][2] = '\0';
+        ovf_names[idx] = ovf_key_storage[idx];
+        ovf_vals[idx] = dummy_num;
+        ovf_hashes[idx] = 0ul;
+      }
+      ovf_obj.wrapping_value = &fake_obj_val;
+      ovf_obj.names = ovf_names;
+      ovf_obj.values = ovf_vals;
+      ovf_obj.hashes = ovf_hashes;
+      ovf_obj.count = 9;
+      ovf_obj.item_capacity = 9;
+      ovf_obj.cell_capacity = 10;
+      ASSERT_EQ(JSONFailure, json_object_grow_and_rehash(&ovf_obj));
+    }
+
+    /* json_object_remove_internal full-table probe completion & k > j shift */
+    {
+      struct json_object_t rem_obj;
+      size_t rem_cells[4];
+      char *rem_names[3];
+      JSON_Value *rem_vals[3];
+      size_t rem_cell_ixs[3];
+      unsigned long rem_hashes[3];
+      char *heap_r0 = NULL;
+      char *heap_w0 = NULL;
+      char rk1[3];
+      char rk2[3];
+
+      rk1[0] = 'r';
+      rk1[1] = '1';
+      rk1[2] = '\0';
+      rk2[0] = 'r';
+      rk2[1] = '2';
+      rk2[2] = '\0';
+
+      /* 2-cell full table: probe loop runs x = 0..0 without hitting INVALID_IX
+       */
+      ASSERT_EQ(JSONSuccess, parson_strdup("r0", &heap_r0));
+      memset(&rem_obj, 0, sizeof(rem_obj));
+      rem_names[0] = heap_r0;
+      rem_names[1] = rk1;
+      rem_vals[0] = dummy_num;
+      rem_vals[1] = dummy_num;
+      rem_hashes[0] = hash_string("r0", 2);
+      rem_hashes[1] = hash_string(rk1, 2);
+      rem_cell_ixs[0] = rem_hashes[0] & 1ul;
+      rem_cell_ixs[1] = 1ul - rem_cell_ixs[0];
+      rem_cells[rem_cell_ixs[0]] = 0;
+      rem_cells[rem_cell_ixs[1]] = 1;
+      rem_obj.wrapping_value = &fake_obj_val;
+      rem_obj.cells = rem_cells;
+      rem_obj.names = rem_names;
+      rem_obj.values = rem_vals;
+      rem_obj.cell_ixs = rem_cell_ixs;
+      rem_obj.hashes = rem_hashes;
+      rem_obj.count = 2;
+      rem_obj.item_capacity = 2;
+      rem_obj.cell_capacity = 2;
+      ASSERT_EQ(JSONSuccess,
+                json_object_remove_internal(&rem_obj, "r0", PARSON_FALSE));
+
+      /* 4-cell wrap-around table: remove cell i=0 while item at j=1 has k=3 > j
+       */
+      ASSERT_EQ(JSONSuccess, parson_strdup("w0", &heap_w0));
+      memset(&rem_obj, 0, sizeof(rem_obj));
+      rem_cells[0] = 0;
+      rem_cells[1] = 1;
+      rem_cells[2] = OBJECT_INVALID_IX;
+      rem_cells[3] = 2;
+      rem_names[0] = heap_w0;
+      rem_names[1] = rk1;
+      rem_names[2] = rk2;
+      rem_vals[0] = dummy_num;
+      rem_vals[1] = dummy_num;
+      rem_vals[2] = dummy_num;
+      rem_cell_ixs[0] = 0;
+      rem_cell_ixs[1] = 1;
+      rem_cell_ixs[2] = 3;
+      rem_hashes[0] = 0ul;
+      rem_hashes[1] = 3ul;
+      rem_hashes[2] = 3ul;
+      rem_obj.wrapping_value = &fake_obj_val;
+      rem_obj.cells = rem_cells;
+      rem_obj.names = rem_names;
+      rem_obj.values = rem_vals;
+      rem_obj.cell_ixs = rem_cell_ixs;
+      rem_obj.hashes = rem_hashes;
+      rem_obj.count = 3;
+      rem_obj.item_capacity = 3;
+      rem_obj.cell_capacity = 4;
+      /* Locate w0 via hash_string("w0", 2) & 3 == 0? Use synthetic hash via
+       * matching key whose hash & 3 == 0: check hash_string("a",1).. */
+      {
+        char key_mod0[4];
+        int ch = 0;
+        for (ch = 'a'; ch <= 'z'; ch++) {
+          key_mod0[0] = (char)ch;
+          key_mod0[1] = '\0';
+          if ((hash_string(key_mod0, 1) & 3ul) == 0ul) {
+            break;
+          }
+        }
+        parson_free(heap_w0);
+        ASSERT_EQ(JSONSuccess, parson_strdup(key_mod0, &heap_w0));
+        rem_names[0] = heap_w0;
+        rem_hashes[0] = hash_string(key_mod0, 1);
+        ASSERT_EQ(JSONSuccess, json_object_remove_internal(&rem_obj, key_mod0,
+                                                           PARSON_FALSE));
+      }
     }
 
     json_value_free(dummy_num);
