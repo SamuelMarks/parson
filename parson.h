@@ -1144,6 +1144,10 @@ static void parson_log_debug(const char *format, ...) {
 /** \brief Maximum allowed nesting depth for parsed JSON on DOS/16-bit targets
  */
 #define MAX_NESTING 64
+#elif defined(__EMSCRIPTEN__) || defined(__wasm__)
+/** \brief Maximum allowed nesting depth for parsed JSON on WebAssembly targets
+ */
+#define MAX_NESTING 512
 #else
 /** \brief Maximum allowed nesting depth for parsed JSON */
 #define MAX_NESTING 2048
@@ -2453,15 +2457,26 @@ json_object_dotremove_internal(JSON_Object *object, const char *name,
   }
   dot_pos = strchr(name, '.');
   if (!dot_pos) {
-    return json_object_remove_internal(object, name, free_value);
+    rc = json_object_remove_internal(object, name, free_value);
+    if (rc != JSONSuccess) {
+      LOG_DEBUG("Error: %d\n", (int)rc);
+      return rc;
+    }
+    return JSONSuccess;
   }
   rc = json_object_getn_value(object, name, (size_t)(dot_pos - name),
                               &temp_value);
   if (rc != JSONSuccess || json_value_get_type(temp_value) != JSONObject) {
+    LOG_DEBUG("Error: %d\n", (int)rc);
     return JSONFailure;
   }
   temp_object = json_value_get_object(temp_value);
-  return json_object_dotremove_internal(temp_object, dot_pos + 1, free_value);
+  rc = json_object_dotremove_internal(temp_object, dot_pos + 1, free_value);
+  if (rc != JSONSuccess) {
+    LOG_DEBUG("Error: %d\n", (int)rc);
+    return rc;
+  }
+  return JSONSuccess;
 }
 
 static void json_object_free(JSON_Object *object) {
@@ -2744,6 +2759,7 @@ static enum json_result_t get_quoted_string(const char **string,
 
 static enum json_result_t parse_value(const char **string, size_t nesting,
                                       JSON_Value **out_value) {
+  enum json_result_t rc = JSONFailure;
   *out_value = NULL;
   if (nesting > MAX_NESTING) {
     return JSONFailure;
@@ -2751,14 +2767,18 @@ static enum json_result_t parse_value(const char **string, size_t nesting,
   SKIP_WHITESPACES(string);
   switch (**string) {
   case '{':
-    return parse_object_value(string, nesting + 1, out_value);
+    rc = parse_object_value(string, nesting + 1, out_value);
+    break;
   case '[':
-    return parse_array_value(string, nesting + 1, out_value);
+    rc = parse_array_value(string, nesting + 1, out_value);
+    break;
   case '\"':
-    return parse_string_value(string, out_value);
+    rc = parse_string_value(string, out_value);
+    break;
   case 'f':
   case 't':
-    return parse_boolean_value(string, out_value);
+    rc = parse_boolean_value(string, out_value);
+    break;
   case '-':
   case '0':
   case '1':
@@ -2770,12 +2790,19 @@ static enum json_result_t parse_value(const char **string, size_t nesting,
   case '7':
   case '8':
   case '9':
-    return parse_number_value(string, out_value);
+    rc = parse_number_value(string, out_value);
+    break;
   case 'n':
-    return parse_null_value(string, out_value);
+    rc = parse_null_value(string, out_value);
+    break;
   default:
     return JSONFailure;
   }
+  if (rc != JSONSuccess) {
+    LOG_DEBUG("Error: %d\n", (int)rc);
+    return rc;
+  }
+  return JSONSuccess;
 }
 
 static enum json_result_t parse_object_value(const char **string,
@@ -2982,6 +3009,7 @@ static enum json_result_t parse_number_value(const char **string,
   }
   rc = is_decimal(*string, (size_t)(end - *string));
   if (rc != JSONSuccess) {
+    LOG_DEBUG("Error: %d\n", (int)rc);
     return rc;
   }
   *string = end;
@@ -3349,6 +3377,7 @@ PARSON_API JSON_Value *json_parse_file(const char *filename) {
   JSON_Value *output_value = NULL;
   rc = read_file(filename, &file_contents);
   if (rc != JSONSuccess) {
+    LOG_DEBUG("Error: %d\n", (int)rc);
     return NULL;
   }
   output_value = json_parse_string(file_contents);
@@ -3363,6 +3392,7 @@ PARSON_API JSON_Value *json_parse_file_with_comments(const char *filename) {
   JSON_Value *output_value = NULL;
   rc = read_file(filename, &file_contents);
   if (rc != JSONSuccess) {
+    LOG_DEBUG("Error: %d\n", (int)rc);
     return NULL;
   }
   output_value = json_parse_string_with_comments(file_contents);
@@ -3382,6 +3412,7 @@ PARSON_API JSON_Value *json_parse_string(const char *string) {
   }
   rc = parse_value(&string, 0, &output_value);
   if (rc != JSONSuccess) {
+    LOG_DEBUG("Error: %d\n", (int)rc);
     return NULL;
   }
   return output_value;
@@ -3407,6 +3438,7 @@ PARSON_API JSON_Value *json_parse_string_with_comments(const char *string) {
   rc = parse_value(&string_mutable_copy_ptr, 0, &result);
   parson_free(string_mutable_copy);
   if (rc != JSONSuccess) {
+    LOG_DEBUG("Error: %d\n", (int)rc);
     return NULL;
   }
   return result;
@@ -3424,6 +3456,7 @@ PARSON_API JSON_Value *json_object_get_value(const JSON_Object *object,
   }
   rc = json_object_getn_value(object, name, strlen(name), &val);
   if (rc != JSONSuccess) {
+    LOG_DEBUG("Error: %d\n", (int)rc);
     return NULL;
   }
   return val;
@@ -3481,6 +3514,7 @@ PARSON_API JSON_Value *json_object_dotget_value(const JSON_Object *object,
   rc = json_object_getn_value(object, name, (size_t)(dot_position - name),
                               &sub_val);
   if (rc != JSONSuccess) {
+    LOG_DEBUG("Error: %d\n", (int)rc);
     return NULL;
   }
   object = json_value_get_object(sub_val);
@@ -3774,6 +3808,7 @@ PARSON_API JSON_Value *json_value_init_string_with_len(const char *string,
   }
   rc = is_valid_utf8(string, length);
   if (rc != JSONSuccess) {
+    LOG_DEBUG("Error: %d\n", (int)rc);
     return NULL;
   }
   rc = parson_strndup(string, length, &copy);
@@ -3911,6 +3946,7 @@ PARSON_API JSON_Value *json_value_deep_copy(const JSON_Value *value) {
   case JSONString:
     rc = json_value_get_string_desc(value, &temp_string);
     if (rc != JSONSuccess) {
+      LOG_DEBUG("Error: %d\n", (int)rc);
       return NULL;
     }
     rc = parson_strndup(temp_string->chars, temp_string->length,
@@ -4010,6 +4046,7 @@ PARSON_API char *json_serialize_to_string(const JSON_Value *value) {
   }
   serialization_result = json_serialize_to_buffer(value, buf, buf_size_bytes);
   if (serialization_result != JSONSuccess) {
+    LOG_DEBUG("Error: %d\n", (int)serialization_result);
     json_free_serialized_string(buf);
     return NULL;
   }
@@ -4091,6 +4128,7 @@ PARSON_API char *json_serialize_to_string_pretty(const JSON_Value *value) {
   serialization_result =
       json_serialize_to_buffer_pretty(value, buf, buf_size_bytes);
   if (serialization_result != JSONSuccess) {
+    LOG_DEBUG("Error: %d\n", (int)serialization_result);
     json_free_serialized_string(buf);
     return NULL;
   }
@@ -4237,10 +4275,16 @@ PARSON_API JSON_Status json_array_clear(JSON_Array *array) {
 /* Implementation */
 PARSON_API JSON_Status json_array_append_value(JSON_Array *array,
                                                JSON_Value *value) {
+  enum json_result_t rc;
   if (array == NULL || value == NULL || value->parent != NULL) {
     return JSONFailure;
   }
-  return json_array_add(array, value);
+  rc = json_array_add(array, value);
+  if (rc != JSONSuccess) {
+    LOG_DEBUG("Error: %d\n", (int)rc);
+    return rc;
+  }
+  return JSONSuccess;
 }
 
 /* Implementation */
@@ -4469,7 +4513,12 @@ PARSON_API JSON_Status json_object_dotset_value(JSON_Object *object,
   }
   dot_pos = strchr(name, '.');
   if (dot_pos == NULL) {
-    return json_object_set_value(object, name, value);
+    status = json_object_set_value(object, name, value);
+    if (status != JSONSuccess) {
+      LOG_DEBUG("Error: %d\n", (int)status);
+      return status;
+    }
+    return JSONSuccess;
   }
   name_len = (size_t)(dot_pos - name);
   rc = json_object_getn_value(object, name, name_len, &temp_value);
@@ -4478,7 +4527,12 @@ PARSON_API JSON_Status json_object_dotset_value(JSON_Object *object,
       return JSONFailure;
     }
     temp_object = json_value_get_object(temp_value);
-    return json_object_dotset_value(temp_object, dot_pos + 1, value);
+    status = json_object_dotset_value(temp_object, dot_pos + 1, value);
+    if (status != JSONSuccess) {
+      LOG_DEBUG("Error: %d\n", (int)status);
+      return status;
+    }
+    return JSONSuccess;
   }
   new_value = json_value_init_object();
   if (new_value == NULL) {
@@ -4606,13 +4660,25 @@ PARSON_API JSON_Status json_object_dotset_null(JSON_Object *object,
 /* Implementation */
 PARSON_API JSON_Status json_object_remove(JSON_Object *object,
                                           const char *name) {
-  return json_object_remove_internal(object, name, PARSON_TRUE);
+  enum json_result_t rc;
+  rc = json_object_remove_internal(object, name, PARSON_TRUE);
+  if (rc != JSONSuccess) {
+    LOG_DEBUG("Error: %d\n", (int)rc);
+    return rc;
+  }
+  return JSONSuccess;
 }
 
 /* Implementation */
 PARSON_API JSON_Status json_object_dotremove(JSON_Object *object,
                                              const char *name) {
-  return json_object_dotremove_internal(object, name, PARSON_TRUE);
+  enum json_result_t rc;
+  rc = json_object_dotremove_internal(object, name, PARSON_TRUE);
+  if (rc != JSONSuccess) {
+    LOG_DEBUG("Error: %d\n", (int)rc);
+    return rc;
+  }
+  return JSONSuccess;
 }
 
 /* Implementation */

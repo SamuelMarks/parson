@@ -322,38 +322,22 @@ TEST test_float_formats_and_serializer_errors(void) {
   PASS();
 }
 
-/** @brief Mock struct matching JSON_Value header layout for JSONError tests */
-struct mock_json_value {
-  /** @brief Parent pointer */
-  void *parent;
-  /** @brief Value type tag */
-  int type;
-};
-
 /**
  * @brief Test JSONError and internal defensive error-percolation branches
  * @return greatest_test_res
  */
 TEST test_json_error_coverage(void) {
-  struct mock_json_value bad_val_mock = {NULL, JSONError};
-  struct mock_json_value unk_val_mock = {NULL, 999};
-  JSON_Value *bad_val = (JSON_Value *)&bad_val_mock;
-  JSON_Value *unk_val = (JSON_Value *)&unk_val_mock;
   JSON_Value *bool_schema = json_value_init_boolean(1);
   JSON_Value *bool_val = json_value_init_boolean(0);
   JSON_Value *good_str_val = json_value_init_string("ok");
   JSON_Value *obj_wrap = json_value_init_object();
   JSON_Object *obj_real = json_value_get_object(obj_wrap);
 
-  ASSERT_EQ(JSONFailure, json_validate(bad_val, bad_val));
-  ASSERT_EQ(JSONFailure, json_validate(unk_val, unk_val));
+  ASSERT_EQ(JSONFailure, json_validate(NULL, NULL));
   ASSERT_EQ(JSONSuccess, json_validate(bool_schema, bool_val));
-  ASSERT_EQ(1, json_value_equals(bad_val, bad_val));
-  ASSERT_EQ(1, json_value_equals(unk_val, unk_val));
-  ASSERT(json_value_deep_copy(bad_val) == NULL);
-  ASSERT(json_value_deep_copy(unk_val) == NULL);
-  ASSERT_EQ(0u, json_serialization_size(bad_val));
-  ASSERT_EQ(0u, json_serialization_size(unk_val));
+  ASSERT_EQ(1, json_value_equals(NULL, NULL));
+  ASSERT(json_value_deep_copy(NULL) == NULL);
+  ASSERT_EQ(0u, json_serialization_size(NULL));
 
   /* Lone minus sign, parse_utf16_hex NUL/bad-hex positions, trail surrogates */
   ASSERT(json_parse_string("-") == NULL);
@@ -376,6 +360,9 @@ TEST test_json_error_coverage(void) {
   ASSERT_EQ(JSONFailure, json_object_dotset_value(obj_real, "a.b", NULL));
   ASSERT_EQ(JSONSuccess, json_object_set_number(obj_real, "present", 1.0));
   ASSERT_EQ(JSONFailure, json_object_remove(obj_real, "missing"));
+  ASSERT_EQ(JSONFailure, json_object_dotremove(obj_real, "missing"));
+  ASSERT_EQ(JSONSuccess, json_object_dotset_number(obj_real, "sub.leaf", 1.0));
+  ASSERT_EQ(JSONFailure, json_object_dotremove(obj_real, "sub.missing"));
 
   /* Exercise wrap-around cluster deletion in json_object_remove_internal:
    * 'j' and 'z' both hash to bucket 15 mod 16; 'k' hashes to bucket 0 mod 16 */
@@ -444,6 +431,10 @@ TEST test_json_error_coverage(void) {
 #ifdef PARSON_SINGLE_HEADER
   {
     unsigned int hex_out = 0;
+    JSON_Value bad_val_storage;
+    JSON_Value unk_val_storage;
+    JSON_Value *bad_val = &bad_val_storage;
+    JSON_Value *unk_val = &unk_val_storage;
     JSON_Value bad_str_val;
     JSON_Value *out_val = NULL;
     const char *cursor = NULL;
@@ -461,6 +452,22 @@ TEST test_json_error_coverage(void) {
     parson_bool_t found = PARSON_FALSE;
     size_t cell_ix = 0;
     JSON_Value *dummy_num = json_value_init_number(1.0);
+
+    memset(&bad_val_storage, 0, sizeof(bad_val_storage));
+    memset(&unk_val_storage, 0, sizeof(unk_val_storage));
+    bad_val_storage.parent = NULL;
+    bad_val_storage.type = JSONError;
+    unk_val_storage.parent = NULL;
+    unk_val_storage.type = 999;
+
+    ASSERT_EQ(JSONFailure, json_validate(bad_val, bad_val));
+    ASSERT_EQ(JSONFailure, json_validate(unk_val, unk_val));
+    ASSERT_EQ(1, json_value_equals(bad_val, bad_val));
+    ASSERT_EQ(1, json_value_equals(unk_val, unk_val));
+    ASSERT(json_value_deep_copy(bad_val) == NULL);
+    ASSERT(json_value_deep_copy(unk_val) == NULL);
+    ASSERT_EQ(0u, json_serialization_size(bad_val));
+    ASSERT_EQ(0u, json_serialization_size(unk_val));
 
     k0_buf[0] = 'k';
     k0_buf[1] = '0';
